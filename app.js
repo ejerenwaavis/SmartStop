@@ -48,12 +48,14 @@ app.route("/")
   })
 
 app.route("/locate")
+  .get(function(req,res){
+    res.redirect("/");
+  })
   .post(function(req, res) {
     const position = req.body.position;
-    console.log(position);
+    // console.log(position);
     const url = 'https://revgeocode.search.hereapi.com/v1/revgeocode?apiKey=' + APIKEY + '&at=' + position + '&lang=en-US'
     https.get(url, function(response) {
-      console.log(response);
       response.on("data", function(data) {
         const location = JSON.parse(data);
         // res.send(location.items[0].address);
@@ -64,7 +66,7 @@ app.route("/locate")
 
 
 
-app.listen(3000, function() {
+app.listen(process.env.PORT||3000, function() {
   console.log("GCodes is Live");
 })
 
