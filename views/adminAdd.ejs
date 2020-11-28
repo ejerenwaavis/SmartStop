@@ -1,0 +1,37 @@
+<%- include('partials/header'); %>
+
+<h3 class="display-5 mt-5 mb-5">Admin Add</h3>
+
+<form>
+  <div class="col-lg-6 offset-lg-3">
+    <input type="text" class="mb-2 form-control" id="" placeholder="Community Name">
+
+    <div class="row gate-code-container">
+      <div class="input-group mb-2 col-lg-6">
+        <input type="text" class="form-control gate-code-description" placeholder="Gate Code Description" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
+      </div>
+      <div class="input-group mb-2 col-lg-6">
+        <input type="text" class="form-control gate-code" placeholder="Gate Code #" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
+        <div class="input-group-append">
+          <button class="btn btn-outline-warning" type="button" onclick="addGateCodeField()" id="button-addon1"><i class="fas fa-plus"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="street-address-container">
+      <div class="input-group mb-2">
+        <input type="text" class="mb-2 form-control street-address" id="" placeholder="Street Address">
+        <div class="input-group-append mb-2">
+          <button class="btn btn-outline-warning" onclick="addAddressField()" type="button" id="addAddress"><i class="fas fa-plus"></i></button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="col-lg-6 offset-lg-3 mt-2">
+    <button type="submit" class="btn btn-primary">Add</button>
+  </div>
+</form>
+
+
+<%- include('partials/footerAdmin'); %>

@@ -29,14 +29,17 @@ const userSchema = new mongoose.Schema({
   googleId: String
 });
 
-const gCodeSchema = new mongoose.Schema({
-  geocode: String,
-  name: String,
-  streets: [String]
+const communitySchema = new mongoose.Schema({
+  communityName: String,
+  streets: [{}], //array of location objects
+  gateCodes:[{  // array of gateCode Objects
+    description:String,
+    value:Number
+  }]
 });
 
 const User = mongoose.model("User", userSchema);
-const GCode = mongoose.model("Gcode", gCodeSchema);
+const Community = mongoose.model("Community", communitySchema);
 
 
 
@@ -62,6 +65,19 @@ app.route("/locate")
         res.render("code", {body:new Body("G-Code","",""), location:location.items[0].address})
       });
     });
+  })
+
+app.route("/adminAdd")
+  .get(function(req,res){
+    res.render("adminAdd", {body:new Body("G-code|Admin","","")})
+  })
+  .post(function(req,res){
+    const community = new Community({
+      communityName: req.body.communityName,
+      streets: req.body.streets.split("_"), //array of location objects
+      gateCodes:req.body.gateCodes.split("_"), // array of gateCode Objects
+    });
+    res.send(community);
   })
 
 
