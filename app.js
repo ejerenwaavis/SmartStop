@@ -72,12 +72,23 @@ app.route("/adminAdd")
     res.render("adminAdd", {body:new Body("G-code|Admin","","")})
   })
   .post(function(req,res){
+    let communityName = req.body.communityName;
+    let strObj = JSON.parse(req.body.streetsJSON); //stringified array of stret names
+    let gateCodesObj = JSON.parse(req.body.gateCodesJSON); // Stringified array of gateCode Objects being extracted to JSON
+
     const community = new Community({
-      communityName: req.body.communityName,
-      streets: req.body.streets.split("_"), //array of location objects
-      gateCodes:req.body.gateCodes.split("_"), // array of gateCode Objects
+      communityName: communityName,
+      streets: strObj, //array of location objects
+      gateCodes: gateCodesObj, // array of gateCode Objects
     });
-    res.send(community);
+    
+    community.save(function(err, savedDoc){
+      if(!err){
+        res.send(savedDoc);
+      }else{
+        res.render("adminAdd", {body:new Body("G-code|Admin","Error: Failed to save the gate cdes","")})
+      }
+    });
   })
 
 
