@@ -21,7 +21,7 @@
 
     <div class="street-address-container">
       <div class="input-group mb-2">
-        <input type="text" autocomplete="on" class="mb-2 form-control street-address" id="" placeholder="Street Addresses in the community">
+        <input type="text" autocomplete="on" class="mb-2 form-control street-address" id="" placeholder="(Type only Street name and City)">
         <div class="input-group-append mb-2">
           <button class="btn btn-outline-warning" onclick="addAddressField()" type="button" id="addAddress"><i class="fas fa-plus"></i></button>
         </div>
@@ -33,7 +33,7 @@
     <button type="button" onclick="sendForm()" class="btn btn-primary">Add</button>
   </div>
 
-  <div class="d-non">
+  <div class="d-none" hidden>
     <textarea   name="gateCodesJSON" id="gate-code-JSON" rows="3" cols="80"></textarea>
     <textarea   name="streetsJSON" id="streets-JSON" rows="3" cols="80"></textarea>
     </div>

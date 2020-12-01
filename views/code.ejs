@@ -1,10 +1,14 @@
 <%- include('partials/header'); %>
 
 <h3 class="display-5 mt-5 mb-5" >G-CODE</h3>
-<p class="mb-0" id="coord-x"></p>
-<p class="mb-0" id="coord-y"></p>
+<p class="d-none mb-0" id="coord-x"></p>
+<p class="d-none mb-0" id="coord-y"></p>
+<p class="display-5 mt-4 " id="label"><%= location.label %></p>
 
-<h2 class="mt-4 mb-5" id="label"><%= location.label %></h2>
+<div class="">
+  <p class="display-5 mt-4 " id="gateCode-description"><%= gateCode.description %> </p>
+  <h1 class="display-1 mb-5" id="label"><%= gateCode.code %></h1
+</div>
 <a href="/" class="btn btn-lg btn-danger mt-5">
   <i class="fas fa-2x fa-sync"></i>
 </a>

@@ -116,7 +116,7 @@ function sendForm(){
   $("#gate-code-JSON").val(gateCodesJSON);
   $("#streets-JSON").val(streetsJSON);
 
-  if(gateCodesJSON.length > 0 && streets.length > 0){
+  if(gateCodesJSON.length > 0 && streetsJSON.length > 0){
     $("#add-community-form").submit();
     console.log("Form sending!!");
   }else{
@@ -131,7 +131,7 @@ function getGaceCodesData(){
   const gateCodes = $('.gate-code');
   for(i=0; i<gateCodeDescriptions.length; i++){
     if(gateCodeDescriptions[i].value.trim() && gateCodes[i].value.trim()){
-      tempArrays.push(new GateCode(gateCodeDescriptions[i].value, gateCodes[i].value));
+      tempArrays.push(new GateCode(gateCodeDescriptions[i].value, gateCodes[i].value.toString() ));
     }
   }
   return tempArrays;

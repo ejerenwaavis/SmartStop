@@ -31,10 +31,10 @@ const userSchema = new mongoose.Schema({
 
 const communitySchema = new mongoose.Schema({
   communityName: String,
-  streets: [{}], //array of location objects
+  streets: [String], //array of location objects
   gateCodes:[{  // array of gateCode Objects
     description:String,
-    value:Number
+    code:Number
   }]
 });
 
@@ -45,9 +45,7 @@ const Community = mongoose.model("Community", communitySchema);
 
 app.route("/")
   .get(function(req, res) {
-    res.render("home", {
-      body: new Body("G-Code", "", "")
-    })
+    res.render("home", { body: new Body("G-Code", "", "")});
   })
 
 app.route("/locate")
@@ -60,9 +58,15 @@ app.route("/locate")
     const url = 'https://revgeocode.search.hereapi.com/v1/revgeocode?apiKey=' + APIKEY + '&at=' + position + '&lang=en-US'
     https.get(url, function(response) {
       response.on("data", function(data) {
-        const location = JSON.parse(data);
-        // res.send(location.items[0].address);
-        res.render("code", {body:new Body("G-Code","",""), location:location.items[0].address})
+        const location = JSON.parse(data).items[0].address;
+
+        Community.find({},function(err, foundObj){
+          if(!err){
+            res.send(foundObj);
+          }
+        });
+
+        // res.render("code", {body:new Body("G-Code","",""), location:location})
       });
     });
   })
@@ -76,12 +80,14 @@ app.route("/adminAdd")
     let strObj = JSON.parse(req.body.streetsJSON); //stringified array of stret names
     let gateCodesObj = JSON.parse(req.body.gateCodesJSON); // Stringified array of gateCode Objects being extracted to JSON
 
+    console.log(gateCodesObj);
+
     const community = new Community({
       communityName: communityName,
       streets: strObj, //array of location objects
       gateCodes: gateCodesObj, // array of gateCode Objects
     });
-    
+
     community.save(function(err, savedDoc){
       if(!err){
         res.send(savedDoc);

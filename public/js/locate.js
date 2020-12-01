@@ -1,7 +1,7 @@
 
 
 function success(position) {
-  console.log(position);
+  // console.log(position);
   const x = position.coords.latitude;
   const y = position.coords.longitude;
   $('#coord-x').text("Lat: " + x);
