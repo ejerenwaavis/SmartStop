@@ -103,9 +103,9 @@ function sendForm(){
   // event.preventDefault();
   let gateCodes = getGaceCodesData();
   let streets = getAddressData();
-  console.log("*******CODES RAW******");
-  console.log(gateCodes);
-  console.log(streets);
+  // console.log("*******CODES RAW******");
+  // console.log(gateCodes);
+  // console.log(streets);
 
   var gateCodesJSON = JSON.stringify(gateCodes);
   var streetsJSON = JSON.stringify(streets);
@@ -118,7 +118,7 @@ function sendForm(){
 
   if(gateCodesJSON.length > 0 && streetsJSON.length > 0){
     $("#add-community-form").submit();
-    console.log("Form sending!!");
+    // console.log("Form sending!!");
   }else{
     $("#error-message").text("Check that all neccessarry fields are supplied");
     $("#error-message").fadeIn(600).fadeOut(5000);
