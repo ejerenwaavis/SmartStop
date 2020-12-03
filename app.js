@@ -132,7 +132,7 @@ app.route("/adminInclude")
   res.redirect("/")
 })
 .post(function(req,res){
-  console.log(req.body.geoCode);
+  console.log(req.body.geoCode); 
   res.redirect("/adminAdd")
 })
 
