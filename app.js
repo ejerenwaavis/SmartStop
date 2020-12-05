@@ -75,6 +75,7 @@ app.route("/locate")
             } else{
               const communityResult = {
                   streets: [location.street],
+                  locationJSON: JSON.stringify(location),
                   communityName: "Unregistered",
                   gateCodes: []
               }
@@ -92,7 +93,7 @@ app.route("/locate")
 
 app.route("/adminAdd")
   .get(function(req,res){
-    res.render("adminAdd", {body:new Body("G-code|Admin","","")});
+    res.render("adminAdd", {body:new Body("G-code|Admin","",""), location:undefined});
   })
   .post(function(req,res){
     let communityName = req.body.communityName;
@@ -132,8 +133,9 @@ app.route("/adminInclude")
   res.redirect("/")
 })
 .post(function(req,res){
-  console.log(req.body.geoCode); 
-  res.redirect("/adminAdd")
+  let location = JSON.parse(req.body.locationJSONString);
+  // console.log(location);
+  res.render("adminAdd", {body:new Body("G-code|Admin","",""), location:location })
 })
 
 

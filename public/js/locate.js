@@ -32,7 +32,7 @@ const getGecode = new Promise(function(resolve,reject){
 })
 
 function includeCommunity(){
-  $('#geoCode').val(x + "," + y);
+  // $('#geoCode').val(x + "," + y);
   $("#geoCodeForm").submit();
 }
 

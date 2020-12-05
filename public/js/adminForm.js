@@ -116,7 +116,9 @@ function sendForm(){
   $("#gate-code-JSON").val(gateCodesJSON);
   $("#streets-JSON").val(streetsJSON);
 
-  if(gateCodesJSON.length > 0 && streetsJSON.length > 0){
+// alert($('#communityName'));
+  if(gateCodes.length > 0 && streets.length > 0 ){
+    alert("gateCodesJSON: " + gateCodesJSON.length + "----- gc" +  gateCodes.length);
     $("#add-community-form").submit();
     // console.log("Form sending!!");
   }else{
