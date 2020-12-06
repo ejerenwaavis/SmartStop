@@ -1,8 +1,10 @@
 <%- include('partials/header'); %>
 
-<h3 class="display-5 mt-5 mb-5" >G-CODE</h3>
+<div class="d-none">
 <p class="mb-0" id="coord-x"></p>
 <p class="mb-0" id="coord-y"></p>
+</div>
+
 <form class="d-none" id="location-form" action="/locate" method="POST">
   <input type="text" name="position" id="position" value="">
   <input type="submit" name="" value="">

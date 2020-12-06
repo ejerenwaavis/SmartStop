@@ -84,7 +84,6 @@ function addGateCodeField(){
   const tempArrays = getGaceCodesData(); //returns an array of gate code objects
   let gateCodeFieldsHtml = constructGateCodeFieldHTML(tempArrays);
   $('.gate-code-container').html(gateCodeFieldsHtml);
-  // console.log(tempArrays);
 }
 
 function constructGateCodeFieldHTML(array){
@@ -98,29 +97,23 @@ function constructGateCodeFieldHTML(array){
 
 
 
+
+
 //****************Handling Form data before submitiion************//
 function sendForm(){
-  // event.preventDefault();
   let gateCodes = getGaceCodesData();
   let streets = getAddressData();
-  // console.log("*******CODES RAW******");
-  // console.log(gateCodes);
-  // console.log(streets);
+
 
   var gateCodesJSON = JSON.stringify(gateCodes);
   var streetsJSON = JSON.stringify(streets);
-  console.log("********JSONS*****");
-  console.log(gateCodesJSON);
-  console.log(streetsJSON);
 
   $("#gate-code-JSON").val(gateCodesJSON);
   $("#streets-JSON").val(streetsJSON);
 
-// alert($('#communityName'));
-  if(gateCodes.length > 0 && streets.length > 0 ){
-    alert("gateCodesJSON: " + gateCodesJSON.length + "----- gc" +  gateCodes.length);
+
+  if(gateCodes.length > 0 && streets.length > 0 && $('#communityName').val().trim().length > 2){
     $("#add-community-form").submit();
-    // console.log("Form sending!!");
   }else{
     $("#error-message").text("Check that all neccessarry fields are supplied");
     $("#error-message").fadeIn(600).fadeOut(5000);

@@ -34,9 +34,9 @@ const communitySchema = new mongoose.Schema({
   streets: [String], //array of location objects
   city: String,
   stateCode: String,
-  gateCodes:[{  // array of gateCode Objects
-    description:String,
-    code:Number
+  gateCodes: [{ // array of gateCode Objects
+    description: String,
+    code: String
   }]
 });
 
@@ -47,11 +47,13 @@ const Community = mongoose.model("Community", communitySchema);
 
 app.route("/")
   .get(function(req, res) {
-    res.render("home", { body: new Body("G-Code", "", "")});
+    res.render("home", {
+      body: new Body("G-Code", "", "")
+    });
   })
 
 app.route("/locate")
-  .get(function(req,res){
+  .get(function(req, res) {
     res.redirect("/");
   })
   .post(function(req, res) {
@@ -62,28 +64,38 @@ app.route("/locate")
       response.on("data", function(data) {
         const location = JSON.parse(data).items[0].address;
         // Community.find({streets:location.street},function(err, foundObj){
-        Community.find({streets:location.street},function(err, foundObj){
-          if(!err){
-            if(foundObj[0]){
+        Community.find({
+          streets: location.street
+        }, function(err, foundObj) {
+          if (!err) {
+            if (foundObj[0]) {
               const communityResult = {
-                  streets: foundObj[0].streets,
-                  communityName: foundObj[0].communityName,
-                  gateCodes: foundObj[0].gateCodes
+                streets: foundObj[0].streets,
+                communityName: foundObj[0].communityName,
+                gateCodes: foundObj[0].gateCodes
               }
               // res.send(foundObj);
-              res.render("code", {body:new Body("G-Code","",""), community: communityResult, location:location})
-            } else{
+              res.render("code", {
+                body: new Body("G-Code", "", ""),
+                community: communityResult,
+                location: location
+              })
+            } else {
               const communityResult = {
-                  streets: [location.street],
-                  locationJSON: JSON.stringify(location),
-                  communityName: "Unregistered",
-                  gateCodes: []
+                streets: [location.street],
+                locationJSON: JSON.stringify(location),
+                communityName: "Unregistered",
+                gateCodes: []
               }
               // res.send(communityResult);
-              res.render("code", {body:new Body("G-Code","Unregistered Community",""), community: communityResult, location:location});
+              res.render("code", {
+                body: new Body("G-Code", "Unregistered Community", ""),
+                community: communityResult,
+                location: location
+              });
             }
-          }   else{
-              res.send("error");
+          } else {
+            res.send("error");
           }
         });
 
@@ -92,17 +104,18 @@ app.route("/locate")
   })
 
 app.route("/adminAdd")
-  .get(function(req,res){
-    res.render("adminAdd", {body:new Body("G-code|Admin","",""), location:undefined});
+  .get(function(req, res) {
+    res.render("adminAdd", {
+      body: new Body("G-code|Admin", "", ""),
+      location: undefined
+    });
   })
-  .post(function(req,res){
+  .post(function(req, res) {
     let communityName = req.body.communityName;
     let stateCode = req.body.stateCode;
     let city = req.body.city;
     let strObj = JSON.parse(req.body.streetsJSON); //stringified array of stret names
     let gateCodesObj = JSON.parse(req.body.gateCodesJSON); // Stringified array of gateCode Objects being extracted to JSON
-
-    console.log(gateCodesObj);
 
     const community = new Community({
       communityName: communityName,
@@ -112,34 +125,42 @@ app.route("/adminAdd")
       gateCodes: gateCodesObj, // array of gateCode Objects
     });
 
-    community.save(function(err, savedDoc){
-      if(!err){
+    community.save(function(err, savedDoc) {
+      if (!err) {
         // res.send(savedDoc);
         const communityResult = {
-            streets: savedDoc.streets,
-            communityName: savedDoc.communityName,
-            gateCodes: savedDoc.gateCodes
+          streets: savedDoc.streets,
+          communityName: savedDoc.communityName,
+          gateCodes: savedDoc.gateCodes
         }
-        res.render("home", {body:new Body("G-code","","Succesfully added "+savedDoc.communityName+" communityt"), community:communityResult});
-      }else{
-        res.render("adminAdd", {body:new Body("G-code|Admin","Error: Failed to save the gate codes","")})
+        res.render("home", {
+          body: new Body("G-code", "", "Succesfully added " + savedDoc.communityName + " communityt"),
+          community: communityResult
+        });
+      } else {
+        res.render("adminAdd", {
+          body: new Body("G-code|Admin", "Error: Failed to save the gate codes", "")
+        })
       }
     });
   })
 
 
 app.route("/adminInclude")
-.get(function(req,res){
-  res.redirect("/")
-})
-.post(function(req,res){
-  let location = JSON.parse(req.body.locationJSONString);
-  // console.log(location);
-  res.render("adminAdd", {body:new Body("G-code|Admin","",""), location:location })
-})
+  .get(function(req, res) {
+    res.redirect("/")
+  })
+  .post(function(req, res) {
+    let location = JSON.parse(req.body.locationJSONString);
+    // console.log(location);
+    res.render("adminAdd", {
+      body: new Body("G-code|Admin", "", ""),
+      location: location
+    })
+  })
 
 
-app.listen(process.env.PORT||3000, function() {
+app.listen(process.env.PORT || 3000, function() {
   console.log("GCodes is Live");
 })
 

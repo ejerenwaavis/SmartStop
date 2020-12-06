@@ -1,13 +1,13 @@
 <%- include('partials/header'); %>
 
-<h3 class="display-5 mt-5 mb-5" >G-CODE</h3>
 <p class="d-none mb-0" id="coord-x"></p>
 <p class="d-none mb-0" id="coord-y"></p>
 <!-- <p class="display-5 mt-4 " id="label"><%= location.label %></p> -->
 
-<div class="">
+<div class="mt-5">
   <p class="mb-0"> <em><b><%= community.communityName %></b> Community</em></p>
   <p class="display-5 mb-4 " id="gateCode-description">
+    <i>Streets inside: </i>
     <% for(street of community.streets){%>
       <%=street+",  " %>
     <% } %>
@@ -15,8 +15,8 @@
    <div class="mt-4">
      <% for (gateCode of community.gateCodes){ %>
        <p class="mb-0 mt-3"><%=gateCode.description%></p>
-     <h1 class="display-5 mt-0 mb-0" id="label">
-       <%= gateCode.code %>
+     <h1 class="display-2 font-weight-bold mt-0 mb-0" id="label">
+       <%= gateCode.code.toString().length == 4? "#" : "";%><%= gateCode.code %>
      </h1>
      <% } %>
      </div>
@@ -29,8 +29,8 @@
   <span onclick="includeCommunity()" class="btn btn-primary btn-xs">Include community </span>
     <% } %>
 </div>
-<a href="/" class="btn btn-lg btn-danger mt-5">
-  <i class="fas fa-2x fa-sync"></i>
+<a href="/" class="btn btn-danger mt-5">
+  <i class="fas fa-1x fa-sync"></i> REFRESH
 </a>
 
 
