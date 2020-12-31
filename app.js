@@ -1,5 +1,6 @@
 require("dotenv").config();
 const APIKEY = process.env.APIKEY;
+const PASSWORD = process.env.PASSWORD;
 
 const express = require("express");
 const app = express();
@@ -16,7 +17,7 @@ app.use(bodyParser.urlencoded({
 app.use(express.static("public"));
 
 
-const uri = "mongodb+srv://Admin-Avis:Password123@db1.s2pl8.mongodb.net/auto-g-codes-0";
+const uri = "mongodb+srv://Admin-Avis:"+PASSWORD+"@db1.s2pl8.mongodb.net/auto-g-codes-0";
 mongoose.connect(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -145,6 +146,18 @@ app.route("/adminAdd")
     });
   })
 
+app.post("/resourceStreet", function(req,res){
+  const position = req.body.position;
+  // console.log("RESOURCE: " + position);
+  const url = 'https://revgeocode.search.hereapi.com/v1/revgeocode?apiKey=' + APIKEY + '&at=' + position + '&lang=en-US'
+  https.get(url, function(response) {
+    response.on("data", function(data) {
+      const location = JSON.parse(data).items[0].address;
+      // console.log(location.street);
+      res.send(location.street);
+    });
+  });
+});
 
 app.route("/adminInclude")
   .get(function(req, res) {

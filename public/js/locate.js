@@ -31,8 +31,17 @@ const getGecode = new Promise(function(resolve,reject){
 });
 })
 
+const getCurrentStreetName = new Promise(function (resolve,reject){
+  const url='/resourceStreet';
+  getGecode.then(function(position){
+  let coords =   position.coords.latitude +","+ position.coords.longitude;
+  const data = { position: coords }
+    $.post(url,data,function(result){resolve(result);});
+  })
+})
+
+
 function includeCommunity(){
-  // $('#geoCode').val(x + "," + y);
   $("#geoCodeForm").submit();
 }
 

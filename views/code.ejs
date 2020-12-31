@@ -16,7 +16,7 @@
      <% for (gateCode of community.gateCodes){ %>
        <p class="mb-0 mt-3"><%=gateCode.description%></p>
      <h1 class="display-2 font-weight-bold mt-0 mb-0" id="label">
-       <%= gateCode.code.toString().length == 4? "#" : "";%><%= gateCode.code %>
+       <%= (gateCode.code.toString().length == 4 &&  gateCode.code.toString() !== "0000" )? "#" : "";%><%= gateCode.code %>
      </h1>
      <% } %>
      </div>
