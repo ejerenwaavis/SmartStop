@@ -31,11 +31,11 @@
 
     <div class="row city-state-container">
       <div class="input-group mb-2 col-6">
-        <input type="text" name="city" value="<%= location ? location.city:"" %>"  class="form-control city" placeholder="City Name" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
+        <input type="text" id="city" name="city" value="<%= location ? location.city:"" %>"  class="form-control city" placeholder="City Name" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
 
       </div>
       <div class="input-group mb-2 col-6">
-          <input required type="text" name="stateCode" value="<%= location? location.stateCode : "" %>" class="form-control gate-code" placeholder="State Code" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
+          <input required id="stateCode" type="text" name="stateCode" value="<%= location? location.stateCode : "" %>" class="form-control gate-code" placeholder="State Code" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
       </div>
     </div>
 

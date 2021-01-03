@@ -187,11 +187,15 @@ function initAutocomplete(){
 
 function fillAddress(){
   let place = autocomplete.getPlace();
+  console.log(place);
   if(place){
     let streetName = place.address_components[0].short_name;
+    let city = place.address_components[1].short_name;
+    let stateCode = place.address_components[3].short_name;
     let tempArrays = getAddressData();
     console.log("StreetName from fillAddress ==> " + streetName);
     $('#autocomplete-address').val(streetName);
+    $('#city').val(city);
     // if (!tempArrays.includes(streetName)){
     //   // console.log("not in tempArray: "+ streetName);
     // }else{
