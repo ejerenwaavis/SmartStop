@@ -1,6 +1,9 @@
+let autocomplete;
+
+
 function generateEmptyTextField(){
   const addressField =
-  '<div class="input-group mb-2"> <input type="text" autofocus value="" class="mb-2 form-control street-address" id="" placeholder="Street Addresses in the community">'+
+  '<div class="input-group mb-2"> <input type="text" autofocus value="" class="mb-2 form-control street-address" id="autocomplete-address" placeholder="Street Addresses in the community">'+
     '<div class="input-group-append mb-2">' +
       '<button class="btn btn-outline-warning" onclick="addAddressField()" type="button" id="addAddress"><i class="fas fa-plus"></i></button>'+
     '</div>'+
@@ -12,7 +15,7 @@ function generateEmptyTextField(){
 function generateTextField(value){
   const addressField =
   '<div class="input-group mb-2">'+
-    '<input type="text" value="'+value+'" class="mb-2 form-control street-address" id="" placeholder="Street Addresses in the community">'+
+    '<input type="text" value="'+value+'" class="mb-2 form-control street-address" id="'+value+'" placeholder="Street Addresses in the community">'+
   '</div>' +
 '';
   return addressField;
@@ -26,6 +29,7 @@ function addAddressField(){
     }
     let fieldsHtml = constructAddressFieldHTML(tempArrays);
     $('.street-address-container').html(fieldsHtml);
+    initAutocomplete();
   });
 }
 
@@ -38,39 +42,6 @@ function constructAddressFieldHTML(array){
   return htmlString;
 }
 
-function getAddressData(){
-  const tempArrays = [];
-  const streetAdresses = $('.street-address');
-  let warningShown = false;
-
-  for(address of streetAdresses){
-
-
-    if(address.value.trim()){
-      let newAddress = address.value.trim();
-      let includes = (tempArrays.includes(newAddress));
-      if(!includes){
-        tempArrays.push(newAddress);
-        // console.log(includes + ": Added " + tempArrays);
-      }else{
-        if(!warningShown){
-          $('#error-message').text("Cannot add duplicate street name");
-          $('#error-message').fadeIn().fadeOut(3000);
-          // console.log("Street Already added");
-          warningShown = true;
-        }
-      }
-      // console.log();
-    }else{
-      $('#error-message').text("Street name cannot be empty");
-      $('#error-message').fadeIn().fadeOut(3000);
-      console.log("Empty Street");
-    }
-  }
-
-
-  return tempArrays;
-}
 
 
 
@@ -125,14 +96,15 @@ function constructGateCodeFieldHTML(array){
 
 
 
-
-
 //****************Handling Form data before submitiion************//
 function sendForm(){
   let gateCodes = getGaceCodesData();
-  let streets = getAddressData();
+  let unFormattedStreets = getAddressData();
+  let streets = [];
 
-
+for (street of unFormattedStreets){
+  streets.push(street.split(",",1)[0]);
+}
   var gateCodesJSON = JSON.stringify(gateCodes);
   var streetsJSON = JSON.stringify(streets);
 
@@ -142,6 +114,7 @@ function sendForm(){
 
   if(gateCodes.length > 0 && streets.length > 0 && $('#communityName').val().trim().length > 2){
     $("#add-community-form").submit();
+    // console.log("Form Submited");
   }else{
     $("#error-message").text("Check that all neccessarry fields are supplied");
     $("#error-message").fadeIn(600).fadeOut(5000);
@@ -160,5 +133,69 @@ function getGaceCodesData(){
   return tempArrays;
 }
 
+function getAddressData(){
+  const tempArrays = [];
+  const streetAdresses = $('.street-address');
+  let warningShown = false;
+
+  for(address of streetAdresses){
+
+
+    if(address.value.trim()){
+      let newAddress = address.value.trim();
+      let includes = (tempArrays.includes(newAddress));
+      if(!includes){
+        tempArrays.push(newAddress);
+        // console.log(includes + ": Added " + tempArrays);
+      }else{
+        if(!warningShown){
+          $('#error-message').text("Cannot add duplicate street name");
+          $('#error-message').fadeIn().fadeOut(3000);
+          // console.log("Street Already added");
+          warningShown = true;
+        }
+      }
+      // console.log();
+    }else{
+      $('#error-message').text("Street name cannot be empty");
+      $('#error-message').fadeIn().fadeOut(3000);
+      console.log("Empty Street");
+    }
+  }
+
+
+  return tempArrays;
+}
+
+
+/************************** Address Auto complete ************************************************/
+
+function initAutocomplete(){
+  let inputs = $('.street-address');
+  const options = {
+    types: ['address']
+  };
+
+  for(input of inputs){
+    autocomplete = new google.maps.places.Autocomplete(input, options);
+    autocomplete.setFields(["address_components"]);
+    autocomplete.addListener("place_changed", fillAddress);
+
+  }
+}
+
+function fillAddress(){
+  let streetName = autocomplete.getPlace().address_components[0].short_name;
+  let tempArrays = getAddressData();
+  if (!tempArrays.includes(streetName)){
+    $('#autocomplete-address').val(streetName);
+    // console.log("not in tempArray: "+ streetName);
+  }else{
+    $('#autocomplete-address').val("");
+    // console.log("Street Name Exists");
+    $('#error-message').text("Cannot add duplicate street name");
+    $('#error-message').fadeIn().fadeOut(3000);
+  }
+}
 
 /******************Handling adding multiple streets to comunity*****************************/
