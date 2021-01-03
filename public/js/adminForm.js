@@ -21,7 +21,9 @@ function generateTextField(value){
 function addAddressField(){
   getCurrentStreetName.then(function(newStreetName){
     const tempArrays = getAddressData();
-    tempArrays.push(newStreetName);
+    if(!(tempArrays.includes(newStreetName))){
+      tempArrays.push(newStreetName);
+    }
     let fieldsHtml = constructAddressFieldHTML(tempArrays);
     $('.street-address-container').html(fieldsHtml);
   });
@@ -43,16 +45,18 @@ function getAddressData(){
 
   for(address of streetAdresses){
 
+
     if(address.value.trim()){
-      let includes = (tempArrays.includes(address.value.trim()));
+      let newAddress = address.value.trim();
+      let includes = (tempArrays.includes(newAddress));
       if(!includes){
-        console.log(includes + ": ADded" + tempArrays);
-        tempArrays.push(address.value);
+        tempArrays.push(newAddress);
+        // console.log(includes + ": Added " + tempArrays);
       }else{
         if(!warningShown){
           $('#error-message').text("Cannot add duplicate street name");
           $('#error-message').fadeIn().fadeOut(3000);
-          console.log("Street Already added");
+          // console.log("Street Already added");
           warningShown = true;
         }
       }
@@ -63,6 +67,7 @@ function getAddressData(){
       console.log("Empty Street");
     }
   }
+
 
   return tempArrays;
 }
