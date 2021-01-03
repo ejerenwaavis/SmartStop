@@ -139,17 +139,18 @@ function getAddressData(){
   let warningShown = false;
 
   for(address of streetAdresses){
+    let newAddress = address.value.trim();
+    newAddress = newAddress.split(",",1)[0];
 
-
-    if(address.value.trim()){
-      let newAddress = address.value.trim();
+    if(newAddress){
+      console.log(newAddress);
       let includes = (tempArrays.includes(newAddress));
       if(!includes){
         tempArrays.push(newAddress);
         // console.log(includes + ": Added " + tempArrays);
       }else{
         if(!warningShown){
-          $('#error-message').text("Cannot add duplicate street name");
+          $('#error-message').text("AddAddress: Cannot add duplicate street name");
           $('#error-message').fadeIn().fadeOut(3000);
           // console.log("Street Already added");
           warningShown = true;
@@ -163,7 +164,7 @@ function getAddressData(){
     }
   }
 
-
+  console.log("GetAddress => " + tempArrays);
   return tempArrays;
 }
 
@@ -185,16 +186,20 @@ function initAutocomplete(){
 }
 
 function fillAddress(){
-  let streetName = autocomplete.getPlace().address_components[0].short_name;
-  let tempArrays = getAddressData();
-  if (!tempArrays.includes(streetName)){
+  let place = autocomplete.getPlace();
+  if(place){
+    let streetName = place.address_components[0].short_name;
+    let tempArrays = getAddressData();
+    console.log("StreetName from fillAddress ==> " + streetName);
     $('#autocomplete-address').val(streetName);
-    // console.log("not in tempArray: "+ streetName);
-  }else{
-    $('#autocomplete-address').val("");
-    // console.log("Street Name Exists");
-    $('#error-message').text("Cannot add duplicate street name");
-    $('#error-message').fadeIn().fadeOut(3000);
+    // if (!tempArrays.includes(streetName)){
+    //   // console.log("not in tempArray: "+ streetName);
+    // }else{
+    //   $('#autocomplete-address').val("");
+    //   // console.log("Street Name Exists");
+    //   $('#error-message').text("Cannot add duplicate street name: "+ streetName);
+    //   $('#error-message').fadeIn().fadeOut(3000);
+    // }
   }
 }
 
