@@ -1,6 +1,7 @@
 require("dotenv").config();
 const APIKEY = process.env.APIKEY;
 const PASSWORD = process.env.PASSWORD;
+const ADMINPASS = process.env.ADMINPASS;
 
 const express = require("express");
 const app = express();
@@ -112,20 +113,52 @@ app.route("/adminAdd")
     });
   })
   .post(function(req, res) {
+/*
     let communityName = req.body.communityName;
     let stateCode = req.body.stateCode;
     let city = req.body.city;
     let strObj = JSON.parse(req.body.streetsJSON); //stringified array of stret names
     let gateCodesObj = JSON.parse(req.body.gateCodesJSON); // Stringified array of gateCode Objects being extracted to JSON
+*/
 
     const community = new Community({
-      communityName: communityName,
-      streets: strObj, //array of location objects
-      city: city,
-      stateCode: stateCode,
-      gateCodes: gateCodesObj, // array of gateCode Objects
+      communityName: req.body.communityName,
+      streets: JSON.parse(req.body.streetsJSON), //array of location objects
+      city: req.body.city,
+      stateCode: req.body.stateCode,
+      gateCodes: JSON.parse(req.body.gateCodesJSON), // array of gateCode Objects
     });
 
+    Community.exists({communityName: community.communityName}, function(err,exists){
+      if(!exists){
+        console.log("Nod duplicates found");
+        community.save(function(err, savedDoc){
+        if(!err){
+          const communityResult = {
+            streets: savedDoc.streets,
+            communityName: savedDoc.communityName,
+            gateCodes: savedDoc.gateCodes
+          }
+          res.render("home", {
+            body: new Body("G-code", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt"),
+            community: communityResult
+          });
+        }else{
+          res.render("code", {
+            body: new Body("G-code|Admin", "Error: Failed to save the gate codes --> "+err, ""),
+            location:community
+          })
+        }
+      });
+      }else{
+        console.log("found duplicate");
+        res.render("adminAdd", {
+          body: new Body("G-code|Admin", "Community '"+ community.communityName +"', alread exists", ""),
+          location:community
+        });
+      }
+});
+/*
     community.save(function(err, savedDoc) {
       if (!err) {
         // res.send(savedDoc);
@@ -144,6 +177,8 @@ app.route("/adminAdd")
         })
       }
     });
+    */
+
   })
 
 app.post("/resourceStreet", function(req,res){
@@ -172,6 +207,19 @@ app.route("/adminInclude")
     })
   })
 
+
+app.route("/validatePassword")
+.get(function(req,res){
+  res.send(false);
+})
+.post(function(req,res){
+    pass = req.body.password;
+    if(pass === ADMINPASS){
+      res.send(true);
+    }else{
+      res.send(false);
+    }
+  })
 
 app.listen(process.env.PORT || 3000, function() {
   console.log("GCodes is Live");

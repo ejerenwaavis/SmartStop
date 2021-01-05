@@ -1,3 +1,7 @@
+$(document).ready(function(){
+  $("#error-message").fadeOut(3500);
+});
+
 let autocomplete;
 
 
@@ -113,6 +117,7 @@ for (street of unFormattedStreets){
 
 
   if(gateCodes.length > 0 && streets.length > 0 && $('#communityName').val().trim().length > 2){
+    // alert(streets);
     $("#add-community-form").submit();
     // console.log("Form Submited");
   }else{
@@ -143,7 +148,7 @@ function getAddressData(){
     newAddress = newAddress.split(",",1)[0];
 
     if(newAddress){
-      console.log(newAddress);
+      // console.log(newAddress);
       let includes = (tempArrays.includes(newAddress));
       if(!includes){
         tempArrays.push(newAddress);
@@ -160,11 +165,11 @@ function getAddressData(){
     }else{
       $('#error-message').text("Street name cannot be empty");
       $('#error-message').fadeIn().fadeOut(3000);
-      console.log("Empty Street");
+      // console.log("Empty Street");
     }
   }
 
-  console.log("GetAddress => " + tempArrays);
+  // console.log("GetAddress => " + tempArrays);
   return tempArrays;
 }
 
@@ -177,34 +182,38 @@ function initAutocomplete(){
     types: ['address']
   };
 
+
   for(input of inputs){
     autocomplete = new google.maps.places.Autocomplete(input, options);
     autocomplete.setFields(["address_components"]);
     autocomplete.addListener("place_changed", fillAddress);
-
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        var geolocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        var circle = new google.maps.Circle(
+            {center: geolocation, radius: position.coords.accuracy});
+        autocomplete.setBounds(circle.getBounds());
+      });
+    }
   }
 }
 
 function fillAddress(){
   let place = autocomplete.getPlace();
-  console.log(place);
+  // console.log(place);
   if(place){
     let streetName = place.address_components[0].short_name;
     let city = place.address_components[1].short_name;
-    let stateCode = place.address_components[3].short_name;
     let tempArrays = getAddressData();
-    console.log("StreetName from fillAddress ==> " + streetName);
+
     $('#autocomplete-address').val(streetName);
     $('#city').val(city);
-    // if (!tempArrays.includes(streetName)){
-    //   // console.log("not in tempArray: "+ streetName);
-    // }else{
-    //   $('#autocomplete-address').val("");
-    //   // console.log("Street Name Exists");
-    //   $('#error-message').text("Cannot add duplicate street name: "+ streetName);
-    //   $('#error-message').fadeIn().fadeOut(3000);
-    // }
+
   }
+
 }
 
 /******************Handling adding multiple streets to comunity*****************************/

@@ -1,7 +1,18 @@
+$("document").ready(function(){
+  $("#accessForm").on("submit", function(e){
+     e.preventDefault();
+      includeCommunity();
+  });
+});
+
 let x = 0;
 let y = 0;
+let geoPosition = 0;
+
+
 
 function success(position) {
+  geoPosition = position;
   // console.log(position);
   x = position.coords.latitude;
   y = position.coords.longitude;
@@ -41,8 +52,25 @@ const getCurrentStreetName = new Promise(function (resolve,reject){
 })
 
 
+
+/**************************  HAndling Admin Privilage Form****************************************/
 function includeCommunity(){
-  $("#geoCodeForm").submit();
+  var adminPass = $("#adminPass").val().trim();
+
+  if (adminPass) {
+      $.post("/validatePassword", {password:adminPass},function(data){
+        if(data === true){
+          $("#geoCodeForm").submit();
+        }else{
+            $("#error-message").text("Access Denied");
+            $("#error-message").fadeIn("slow").fadeOut(3000);
+          }
+
+      });
+  }else{
+    $("#error-message").text("Access Denied");
+    $("#error-message").fadeIn("slow").fadeOut(3000);
+  }
 }
 
 
