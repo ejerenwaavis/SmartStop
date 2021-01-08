@@ -85,7 +85,7 @@ passport.deserializeUser(function(user, done) {
 passport.use(new GoogleStrategy({
     clientID: CLIENT_ID,
     clientSecret: CLIENT_SECRETE,
-    callbackURL: "/loggedIn",
+    callbackURL: "https://auto-g-codes.herokuapp.com/loggedIn",  //"/loggedIn",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
   },
   function(accessToken, refreshToken, profile, cb) {
@@ -117,7 +117,7 @@ passport.use(new GoogleStrategy({
         }
       }else{
         console.log("Internal error");
-        return cb(new Error("internal server error"))
+        return cb(new Error(err))
       }
     });
   }
