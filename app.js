@@ -35,7 +35,7 @@ app.use (function (req, res, next) {
     // console.log(req.headers.host);
         if (req.secure) {
                 // request was via https, so do no special handling
-                next();
+                res.redirect('https://' + req.headers.host + req.url);
         } else {
                 // request was via http, so redirect to https
                 res.redirect('https://' + req.headers.host + req.url);
