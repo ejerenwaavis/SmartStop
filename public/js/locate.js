@@ -3,6 +3,7 @@ $("document").ready(function(){
      e.preventDefault();
       includeCommunity();
   });
+
 });
 
 let x = 0;
@@ -62,17 +63,23 @@ function includeCommunity(){
         if(data === true){
           $("#geoCodeForm").submit();
         }else{
-            $("#error-message").text("Access Denied");
+            focusOnAdminPass();
+            $("#error-message").text("Access Denied - Invalid Password");
             $("#error-message").fadeIn("slow").fadeOut(3000);
           }
 
       });
   }else{
-    $("#error-message").text("Access Denied");
+    $("#error-message").text("Access Denied - Password cannot be empty");
     $("#error-message").fadeIn("slow").fadeOut(3000);
+    focusOnAdminPass();
   }
 }
 
-
+function focusOnAdminPass(){
+  $('#staticBackdrop').on('shown.bs.modal', function () {
+      $('#adminPass').focus();
+  });
+}
 
 getGecode.then(success).catch(error);

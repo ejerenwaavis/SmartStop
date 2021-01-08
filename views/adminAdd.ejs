@@ -21,7 +21,7 @@
 
     <div class="street-address-container">
       <div class="input-group mb-2">
-        <input required type="text" value="<%= location? location.street : "" %>" autocomplete="on" class="mb-2 form-control street-address" id="" placeholder="(Type only the Street names)">
+        <input required type="text" value="<%= location? location.street : "" %>" autocomplete="on" class="mb-2 form-control street-address" id="autocomplete-address" placeholder="(Type only the Street names)">
 
         <div class="input-group-append mb-2">
           <button class="btn btn-outline-warning"  onclick="addAddressField()" type="button" id="addAddress"><i class="fas fa-plus"></i></button>

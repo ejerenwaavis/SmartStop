@@ -2,6 +2,9 @@ require("dotenv").config();
 const APIKEY = process.env.APIKEY;
 const PASSWORD = process.env.PASSWORD;
 const ADMINPASS = process.env.ADMINPASS;
+const SECRETE = process.env.SECRETE;
+const CLIENT_ID = process.env.CLIENT_ID
+const CLIENT_SECRETE = process.env.CLIENT_SECRETE;
 
 const express = require("express");
 const app = express();
@@ -9,6 +12,16 @@ const ejs = require("ejs");
 const https = require("https");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
+const findOrCreate = require("mongoose-findorcreate");
+
+
+
+/*************** Authentication & Session Management ********************/
+const session = require("express-session");
+const passport = require("passport");
+const passportLocalMongoose = require("passport-local-mongoose");
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+
 
 
 app.set("view engine", "ejs");
@@ -16,6 +29,13 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 app.use(express.static("public"));
+
+
+/******************** Authentication Setup & Config *************/
+//Authentication & Session Management Config
+app.use(session({secret:SECRETE, resave:false, saveUninitialized:false}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 
 const uri = "mongodb+srv://Admin-Avis:"+PASSWORD+"@db1.s2pl8.mongodb.net/auto-g-codes-0";
@@ -26,10 +46,12 @@ mongoose.connect(uri, {
 mongoose.set("useCreateIndex", true);
 
 const userSchema = new mongoose.Schema({
-  email: String,
-  password: String,
+  name: String,
   googleId: String
 });
+// Tell the User Schema to use the passportLocalMongoose plugin
+userSchema.plugin(passportLocalMongoose);
+userSchema.plugin(findOrCreate);
 
 const communitySchema = new mongoose.Schema({
   communityName: String,
@@ -41,18 +63,100 @@ const communitySchema = new mongoose.Schema({
     code: String
   }]
 });
+const allowedUserSchema = new mongoose.Schema({googleId: String });
 
 const User = mongoose.model("User", userSchema);
+const AllowedUser = mongoose.model("AllowedUser", allowedUserSchema);
 const Community = mongoose.model("Community", communitySchema);
 
 
+/********* Configure Passport **************/
+passport.use(User.createStrategy());
+//Serialize implementation
+passport.serializeUser(function(user, done) {
+  done(null, user);
+});
+//deserialize implementation
+passport.deserializeUser(function(user, done) {
+  done(null, user);
+});
 
+//telling passport to use GoogleStrategy
+passport.use(new GoogleStrategy({
+    clientID: CLIENT_ID,
+    clientSecret: CLIENT_SECRETE,
+    callbackURL: "http://localhost:3000/loggedIn",
+    userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+    let userProfile = profile._json;
+
+    User.findOne({googleId:userProfile.sub},function(err,user){
+      if(!err){
+        if(user){
+          AllowedUser.exists({googleId:user.googleId}, function(err,exist){
+            if(exist){
+              // console.log("user is allowed");
+              return cb(null, user)
+            }else{
+              // console.log("Unauthorized user");
+              return cb(err);
+            }
+          });
+        }else{
+          // console.log("user not found - creating new user");
+          let newUser = new User ({
+            name: userProfile.name,
+            googleId: userProfile.sub
+          })
+          newUser.save()
+            .then(function (){return cb(err);})
+            .catch(function (){console.log("Saving error");
+          });
+        }
+      }else{
+        console.log("Internal error");
+        return cb(new Error("internal server error"))
+      }
+    });
+  }
+));
+
+
+
+/**************************** Route aHandling ********************************/
 app.route("/")
   .get(function(req, res) {
-    res.render("home", {
-      body: new Body("G-Code", "", "")
-    });
+    if(req.isAuthenticated()){
+      res.render("home", { body: new Body("G-Code", "", "") });
+    }else{
+      res.redirect("/login");
+    }
   })
+
+app.route("/login")
+  .get(function(req,res){
+      res.render("login", {body:new Body("Login","","")});
+    })
+
+app.get('/auth/google', passport.authenticate('google', { scope: ['profile']}));
+
+app.route("/loggedIn")
+  .get( passport.authenticate('google', { failureRedirect: '/login' }),
+    function(req, res) {
+      // Successful authentication, redirect user page.
+      console.log("Logged IN");
+      // console.log(user);
+      res.render('home', {body:new Body("G-Code","", "Google Authentication Successful")});
+    })
+
+
+app.route("/logout")
+  .get(function(req,res){
+    req.logout();
+    res.redirect("/");
+    // res.render("ho", {body:new Body("Login","","Logged out Successfully")})
+  });
 
 app.route("/locate")
   .get(function(req, res) {
@@ -107,10 +211,7 @@ app.route("/locate")
 
 app.route("/adminAdd")
   .get(function(req, res) {
-    res.render("adminAdd", {
-      body: new Body("G-code|Admin", "", ""),
-      location: undefined
-    });
+    res.redirect("/");
   })
   .post(function(req, res) {
 /*
@@ -131,7 +232,7 @@ app.route("/adminAdd")
 
     Community.exists({communityName: community.communityName}, function(err,exists){
       if(!exists){
-        console.log("Nod duplicates found");
+        // console.log("No duplicates found");
         community.save(function(err, savedDoc){
         if(!err){
           const communityResult = {
@@ -224,6 +325,13 @@ app.route("/validatePassword")
 app.listen(process.env.PORT || 3000, function() {
   console.log("GCodes is Live");
 })
+
+
+
+/*******************functionalities********************/
+function allowedUser(userID){
+
+}
 
 function Body(title, error, message) {
   this.title = title;

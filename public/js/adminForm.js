@@ -34,6 +34,7 @@ function addAddressField(){
     let fieldsHtml = constructAddressFieldHTML(tempArrays);
     $('.street-address-container').html(fieldsHtml);
     initAutocomplete();
+    $("#autocomplete-address").focus();
   });
 }
 
@@ -211,7 +212,7 @@ function fillAddress(){
 
     $('#autocomplete-address').val(streetName);
     $('#city').val(city);
-
+    $("#addAddress").focus();
   }
 
 }

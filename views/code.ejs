@@ -31,7 +31,7 @@
 
 
   <!-- Button trigger modal -->
-  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+  <button type="button"  class="btn btn-primary" onclick="focusOnAdminPass()" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
 Include community
   </button>
 
@@ -41,14 +41,14 @@ Include community
       <div class="modal-content">
         <div class="modal-header">
           <h6 class="modal-title" id="staticBackdropLabel">Admin privilage required</h6>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         </div>
         <form id="accessForm" >
         <div class="modal-body">
             <p class="text-danger" id="error-message"> </p>
             <div class="mb-3">
               <!-- <label for="recipient-name" class="col-form-label">Recipient:</label> -->
-              <input type="password" class="form-control" placeholder="Type your Admin Password " autofocus id="adminPass">
+              <input type="password" class="form-control" placeholder="Type your Admin Password "  id="adminPass">
             </div>
         </div>
         <div class="modal-footer">
