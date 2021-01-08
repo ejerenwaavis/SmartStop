@@ -129,8 +129,10 @@ passport.use(new GoogleStrategy({
 app.route("/")
   .get(function(req, res) {
     if(req.isAuthenticated()){
+      console.log("Authorised Request");
       res.render("home", { body: new Body("G-Code", "", "") });
     }else{
+      console.log("UN-authenticated Request");
       res.redirect("/login");
     }
   })
@@ -146,16 +148,17 @@ app.route("/loggedIn")
   .get( passport.authenticate('google', { failureRedirect: '/login' }),
     function(req, res) {
       // Successful authentication, redirect user page.
-      console.log("Logged IN");
+      // console.log("Logged IN");
       // console.log(user);
-      res.redirect("/");
-      // res.render('home', {body:new Body("G-Code","", "Google Authentication Successful")});
+      // res.redirect("/");
+      res.render('home', {body:new Body("G-Code","", "Google Authentication Successful")});
     })
 
 
 app.route("/logout")
   .get(function(req,res){
     req.logout();
+    console.log("Logged Out");
     res.redirect("/");
     // res.render("ho", {body:new Body("Login","","Logged out Successfully")})
   });
