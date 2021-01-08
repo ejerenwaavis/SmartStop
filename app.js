@@ -148,7 +148,8 @@ app.route("/loggedIn")
       // Successful authentication, redirect user page.
       console.log("Logged IN");
       // console.log(user);
-      res.render('home', {body:new Body("G-Code","", "Google Authentication Successful")});
+      res.redirect("/");
+      // res.render('home', {body:new Body("G-Code","", "Google Authentication Successful")});
     })
 
 
