@@ -32,8 +32,8 @@ app.use(express.static("public"));
 
 //Forcing https so as to allow frontend geolocation work properly
 app.use (function (req, res, next) {
-    // console.log(req.headers.host); 
-        if (req.secure || req.headers.host === "localhost:3000") {
+    // console.log(req.headers.host);
+        if (req.secure) {
                 // request was via https, so do no special handling
                 next();
         } else {
