@@ -30,12 +30,24 @@ app.use(bodyParser.urlencoded({
 }));
 app.use(express.static("public"));
 
+//Forcing https so as to allow frontend geolocation work properly
+app.use (function (req, res, next) {
+    console.log(req.headers.host);
+        if (req.secure || req.headers.host === "localhost:3000") {
+                // request was via https, so do no special handling
+                next();
+        } else {
+                // request was via http, so redirect to https
+                res.redirect('https://' + req.headers.host + req.url);
+        }
+});
 
 /******************** Authentication Setup & Config *************/
 //Authentication & Session Management Config
 app.use(session({secret:SECRETE, resave:false, saveUninitialized:false}));
 app.use(passport.initialize());
 app.use(passport.session());
+
 
 
 const uri = "mongodb+srv://Admin-Avis:"+PASSWORD+"@db1.s2pl8.mongodb.net/auto-g-codes-0";
@@ -85,7 +97,7 @@ passport.deserializeUser(function(user, done) {
 passport.use(new GoogleStrategy({
     clientID: CLIENT_ID,
     clientSecret: CLIENT_SECRETE,
-    callbackURL: "https://auto-g-codes.herokuapp.com/loggedIn",  //"/loggedIn",
+    callbackURL: "/loggedIn",  //"/loggedIn",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
   },
   function(accessToken, refreshToken, profile, cb) {
