@@ -96,7 +96,8 @@ passport.use(new GoogleStrategy({
         if(user){
           AllowedUser.exists({googleId:user.googleId}, function(err,exist){
             if(exist){
-              // console.log("user is allowed");
+              console.log("Logged In as: " + userProfile.name);
+
               return cb(null, user)
             }else{
               // console.log("Unauthorized user");
