@@ -1,10 +1,11 @@
 require("dotenv").config();
 const APIKEY = process.env.APIKEY;
-const PASSWORD = process.env.PASSWORD;
 const ADMINPASS = process.env.ADMINPASS;
-const SECRETE = process.env.SECRETE;
+const ADMINCONSOLE = process.env.ADMINCONSOLE;
 const CLIENT_ID = process.env.CLIENT_ID
 const CLIENT_SECRETE = process.env.CLIENT_SECRETE;
+const PASSWORD = process.env.PASSWORD;
+const SECRETE = process.env.SECRETE;
 
 const express = require("express");
 const app = express();
@@ -31,7 +32,7 @@ app.use(bodyParser.urlencoded({
 app.use(express.static("public"));
 
 //Forcing https so as to allow frontend geolocation work properly
-// app.use (function (req, res, next) {
+/* app.use (function (req, res, next) {
 //     // console.log(req.headers.host);
 //         if (req.secure) {
 //                 // request was via https, so do no special handling
@@ -41,16 +42,21 @@ app.use(express.static("public"));
 //                 res.redirect('https://' + req.headers.host + req.url);
 //         }
 // });
+*/
 
 /******************** Authentication Setup & Config *************/
 //Authentication & Session Management Config
-app.use(session({secret:SECRETE, resave:false, saveUninitialized:false}));
+app.use(session({
+  secret: SECRETE,
+  resave: false,
+  saveUninitialized: false
+}));
 app.use(passport.initialize());
 app.use(passport.session());
 
 
 
-const uri = "mongodb+srv://Admin-Avis:"+PASSWORD+"@db1.s2pl8.mongodb.net/auto-g-codes-0";
+const uri = "mongodb+srv://Admin-Avis:" + PASSWORD + "@db1.s2pl8.mongodb.net/auto-g-codes-0";
 mongoose.connect(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -59,7 +65,8 @@ mongoose.set("useCreateIndex", true);
 
 const userSchema = new mongoose.Schema({
   name: String,
-  googleId: String
+  googleId: String,
+  verified: false
 });
 // Tell the User Schema to use the passportLocalMongoose plugin
 userSchema.plugin(passportLocalMongoose);
@@ -75,7 +82,9 @@ const communitySchema = new mongoose.Schema({
     code: String
   }]
 });
-const allowedUserSchema = new mongoose.Schema({googleId: String });
+const allowedUserSchema = new mongoose.Schema({
+  googleId: String
+});
 
 const User = mongoose.model("User", userSchema);
 const AllowedUser = mongoose.model("AllowedUser", allowedUserSchema);
@@ -97,37 +106,42 @@ passport.deserializeUser(function(user, done) {
 passport.use(new GoogleStrategy({
     clientID: CLIENT_ID,
     clientSecret: CLIENT_SECRETE,
-    callbackURL: "https://auto-g-codes.herokuapp.com/loggedIn",  //"/loggedIn",
+    callbackURL: "https://auto-g-codes.herokuapp.com/loggedIn",
+    // callbackURL: "/loggedIn",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
   },
   function(accessToken, refreshToken, profile, cb) {
     let userProfile = profile._json;
 
-    User.findOne({googleId:userProfile.sub},function(err,user){
-      if(!err){
-        if(user){
-          AllowedUser.exists({googleId:user.googleId}, function(err,exist){
-            if(exist){
-              console.log("Logged In as: " + userProfile.name);
+    User.findOne({
+      googleId: userProfile.sub
+    }, function(err, user) {
+      if (!err) {
+        if (user) {
 
+            if (user.verified) {
+              console.log("Logged In as: " + userProfile.name);
               return cb(null, user)
-            }else{
+            } else {
               // console.log("Unauthorized user");
               return cb(err);
             }
-          });
-        }else{
+        } else {
           // console.log("user not found - creating new user");
-          let newUser = new User ({
+          let newUser = new User({
             name: userProfile.name,
-            googleId: userProfile.sub
+            googleId: userProfile.sub,
+            verified: false
           })
           newUser.save()
-            .then(function (){return cb(err);})
-            .catch(function (){console.log("Saving error");
-          });
+            .then(function() {
+              return cb(err);
+            })
+            .catch(function() {
+              console.log("Saving error");
+            });
         }
-      }else{
+      } else {
         console.log("Internal error");
         return cb(new Error(err))
       }
@@ -140,35 +154,45 @@ passport.use(new GoogleStrategy({
 /**************************** Route aHandling ********************************/
 app.route("/")
   .get(function(req, res) {
-    if(req.isAuthenticated()){
+    if (req.isAuthenticated()) {
       console.log("Authorised Request");
-      res.render("home", { body: new Body("G-Code", "", "") });
-    }else{
+      res.render("home", {
+        body: new Body("G-Code", "", "")
+      });
+    } else {
       console.log("UN-authenticated Request");
       res.redirect("/login");
     }
   })
 
 app.route("/login")
-  .get(function(req,res){
-      res.render("login", {body:new Body("Login","","")});
-    })
+  .get(function(req, res) {
+    res.render("login", {
+      body: new Body("Login", "", "")
+    });
+  })
 
-app.get('/auth/google', passport.authenticate('google', { scope: ['profile']}));
+app.get('/auth/google', passport.authenticate('google', {
+  scope: ['profile']
+}));
 
 app.route("/loggedIn")
-  .get( passport.authenticate('google', { failureRedirect: '/login' }),
+  .get(passport.authenticate('google', {
+      failureRedirect: '/login'
+    }),
     function(req, res) {
       // Successful authentication, redirect user page.
       // console.log("Logged IN");
       // console.log(user);
       // res.redirect("/");
-      res.render('home', {body:new Body("G-Code","", "Google Authentication Successful")});
+      res.render('home', {
+        body: new Body("G-Code", "", "Google Authentication Successful")
+      });
     })
 
 
 app.route("/logout")
-  .get(function(req,res){
+  .get(function(req, res) {
     req.logout();
     console.log("Logged Out");
     res.redirect("/");
@@ -231,13 +255,13 @@ app.route("/adminAdd")
     res.redirect("/");
   })
   .post(function(req, res) {
-/*
-    let communityName = req.body.communityName;
-    let stateCode = req.body.stateCode;
-    let city = req.body.city;
-    let strObj = JSON.parse(req.body.streetsJSON); //stringified array of stret names
-    let gateCodesObj = JSON.parse(req.body.gateCodesJSON); // Stringified array of gateCode Objects being extracted to JSON
-*/
+    /*
+        let communityName = req.body.communityName;
+        let stateCode = req.body.stateCode;
+        let city = req.body.city;
+        let strObj = JSON.parse(req.body.streetsJSON); //stringified array of stret names
+        let gateCodesObj = JSON.parse(req.body.gateCodesJSON); // Stringified array of gateCode Objects being extracted to JSON
+    */
 
     const community = new Community({
       communityName: req.body.communityName,
@@ -247,59 +271,61 @@ app.route("/adminAdd")
       gateCodes: JSON.parse(req.body.gateCodesJSON), // array of gateCode Objects
     });
 
-    Community.exists({communityName: community.communityName}, function(err,exists){
-      if(!exists){
+    Community.exists({
+      communityName: community.communityName
+    }, function(err, exists) {
+      if (!exists) {
         // console.log("No duplicates found");
-        community.save(function(err, savedDoc){
-        if(!err){
-          const communityResult = {
-            streets: savedDoc.streets,
-            communityName: savedDoc.communityName,
-            gateCodes: savedDoc.gateCodes
+        community.save(function(err, savedDoc) {
+          if (!err) {
+            const communityResult = {
+              streets: savedDoc.streets,
+              communityName: savedDoc.communityName,
+              gateCodes: savedDoc.gateCodes
+            }
+            res.render("home", {
+              body: new Body("G-code", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt"),
+              community: communityResult
+            });
+          } else {
+            res.render("code", {
+              body: new Body("G-code|Admin", "Error: Failed to save the gate codes --> " + err, ""),
+              location: community
+            })
           }
-          res.render("home", {
-            body: new Body("G-code", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt"),
-            community: communityResult
-          });
-        }else{
-          res.render("code", {
-            body: new Body("G-code|Admin", "Error: Failed to save the gate codes --> "+err, ""),
-            location:community
-          })
-        }
-      });
-      }else{
-        console.log("found duplicate");
-        res.render("adminAdd", {
-          body: new Body("G-code|Admin", "Community '"+ community.communityName +"', alread exists", ""),
-          location:community
-        });
-      }
-});
-/*
-    community.save(function(err, savedDoc) {
-      if (!err) {
-        // res.send(savedDoc);
-        const communityResult = {
-          streets: savedDoc.streets,
-          communityName: savedDoc.communityName,
-          gateCodes: savedDoc.gateCodes
-        }
-        res.render("home", {
-          body: new Body("G-code", "", "Succesfully added " + savedDoc.communityName + " communityt"),
-          community: communityResult
         });
       } else {
+        console.log("found duplicate");
         res.render("adminAdd", {
-          body: new Body("G-code|Admin", "Error: Failed to save the gate codes", "")
-        })
+          body: new Body("G-code|Admin", "Community '" + community.communityName + "', alread exists", ""),
+          location: community
+        });
       }
     });
-    */
+    /*
+        community.save(function(err, savedDoc) {
+          if (!err) {
+            // res.send(savedDoc);
+            const communityResult = {
+              streets: savedDoc.streets,
+              communityName: savedDoc.communityName,
+              gateCodes: savedDoc.gateCodes
+            }
+            res.render("home", {
+              body: new Body("G-code", "", "Succesfully added " + savedDoc.communityName + " communityt"),
+              community: communityResult
+            });
+          } else {
+            res.render("adminAdd", {
+              body: new Body("G-code|Admin", "Error: Failed to save the gate codes", "")
+            })
+          }
+        });
+        */
 
   })
 
-app.post("/resourceStreet", function(req,res){
+app.post("/resourceStreet", function(req, res) {
   const position = req.body.position;
   // console.log("RESOURCE: " + position);
   const url = 'https://revgeocode.search.hereapi.com/v1/revgeocode?apiKey=' + APIKEY + '&at=' + position + '&lang=en-US'
@@ -325,19 +351,84 @@ app.route("/adminInclude")
     })
   })
 
+app.route("/adminConsole")
+  .get(function(req, res) {
+    User.find({}, function(err, foundUsers) {
+      if (!err) {
+        if (foundUsers) {
+          res.render("adminConsole", {
+            body: new Body("Admin Console", "", ""),
+            users: foundUsers
+          });
+        } else {
+          res.render("adminConsole", {
+            body: new Body("Admin Console", "No Users Found", ""),
+            users: undefined
+          });
+        }
+      } else {
+        res.render("adminConsole", {
+          body: new Body("Admin Console", "Unable to Search the database", ""),
+          users: undefined
+        });
+      }
+    });
+  })
+
+app.route("/verifyUser")
+  .post(function(req,res){
+    let id = req.body.userID;
+    console.log(id);
+    User.updateOne({googleId:id}, { verified: true },function(err,updated){
+      if(updated.n > 0){
+        res.send(true);
+      }else{
+        console.log(err);
+        res.send(false);
+      }
+    })
+  })
+
+  app.route("/restrictUser")
+    .post(function(req,res){
+      let id = req.body.userID;
+      console.log(id);
+      User.updateOne({googleId:id}, { verified: false },function(err,updated){
+        if(updated.n > 0){
+          res.send(true);
+        }else{
+          console.log(err);
+          res.send(false);
+        }
+      })
+    })
 
 app.route("/validatePassword")
-.get(function(req,res){
-  res.send(false);
-})
-.post(function(req,res){
+  .get(function(req, res) {
+    res.send(false);
+  })
+  .post(function(req, res) {
     pass = req.body.password;
-    if(pass === ADMINPASS){
+    if (pass === ADMINPASS) {
       res.send(true);
-    }else{
+    } else {
       res.send(false);
     }
   })
+
+  app.route("/validateConsolePassword")
+    .get(function(req, res) {
+      res.send(false);
+    })
+    .post(function(req, res) {
+      pass = req.body.password;
+      console.log(pass);
+      if (pass === ADMINCONSOLE) {
+        res.send(true);
+      } else {
+        res.send(false);
+      }
+    })
 
 app.listen(process.env.PORT || 3000, function() {
   console.log("GCodes is Live");
@@ -346,7 +437,7 @@ app.listen(process.env.PORT || 3000, function() {
 
 
 /*******************functionalities********************/
-function allowedUser(userID){
+function allowedUser(userID) {
 
 }
 

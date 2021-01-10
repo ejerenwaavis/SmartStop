@@ -1,0 +1,35 @@
+<%- include('partials/header'); %>
+
+<h3 class="display-5 mt-5 mb-5">Admin Console</h3>
+<p id="error-message" class="text-danger display-5 mt-5 mb-5"><%=body.error%></p>
+<p id="message" class="text-success display-5 mt-5 mb-5"><%=body.message%></p>
+<div class="container">
+  <ul class="list-group">
+      <%for(user of users){%>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <%=user.name%>
+          <%if(user.verified){%>
+            <span id="<%=user.googleId%>" onclick="restrictUser(this)" class="verify-btn btn btn-outline-success ">
+              Verified
+              <i id="<%=user.googleId%>" class="fas fa-user-check"></i>
+            </span>
+
+          <%}else{%>
+            <span id="<%=user.googleId%>" onclick="verifyUser(this)" class="verify-btn btn btn-outline-danger ">
+              Unverified
+              <i id="<%=user.googleId%>" class="fas fa-user-times"></i>
+            </span>
+          <%}%>
+        </li>
+      <%}%>
+  </ul>
+</div>
+
+<div class="d-none" hidden>
+  <!-- <div class=""> -->
+  <textarea name="gateCodesJSON" id="gate-code-JSON" rows="3" cols="80"></textarea>
+  <textarea name="streetsJSON" id="streets-JSON" rows="3" cols="80"></textarea>
+</div>
+
+
+<%- include('partials/footerAdminConsole'); %>
