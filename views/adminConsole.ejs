@@ -7,17 +7,17 @@
   <ul class="list-group">
       <%for(user of users){%>
         <li class="list-group-item d-flex justify-content-between align-items-center">
-          <%=user.name%>
+          <%=user.username%>
           <%if(user.verified){%>
-            <span id="<%=user.googleId%>" onclick="restrictUser(this)" class="verify-btn btn btn-outline-success ">
+            <span id="<%=user._id%>" onclick="restrictUser(this)" class="verify-btn btn btn-outline-success ">
               Verified
-              <i id="<%=user.googleId%>" class="fas fa-user-check"></i>
+              <i id="<%=user._id%>" class="fas fa-user-check"></i>
             </span>
 
           <%}else{%>
-            <span id="<%=user.googleId%>" onclick="verifyUser(this)" class="verify-btn btn btn-outline-danger ">
+            <span id="<%=user._id%>" onclick="verifyUser(this)" class="verify-btn btn btn-outline-danger ">
               Unverified
-              <i id="<%=user.googleId%>" class="fas fa-user-times"></i>
+              <i id="<%=user._id%>" class="fas fa-user-times"></i>
             </span>
           <%}%>
         </li>

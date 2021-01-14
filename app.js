@@ -64,9 +64,9 @@ mongoose.connect(uri, {
 mongoose.set("useCreateIndex", true);
 
 const userSchema = new mongoose.Schema({
-  name: String,
-  googleId: String,
-  verified: false
+  username: String,
+  _id: String,
+  verified: { type: Boolean, default: false }
 });
 // Tell the User Schema to use the passportLocalMongoose plugin
 userSchema.plugin(passportLocalMongoose);
@@ -82,12 +82,12 @@ const communitySchema = new mongoose.Schema({
     code: String
   }]
 });
-const allowedUserSchema = new mongoose.Schema({
-  googleId: String
-});
+// const allowedUserSchema = new mongoose.Schema({
+//   googleId: String
+// });
 
 const User = mongoose.model("User", userSchema);
-const AllowedUser = mongoose.model("AllowedUser", allowedUserSchema);
+// const AllowedUser = mongoose.model("AllowedUser", allowedUserSchema);
 const Community = mongoose.model("Community", communitySchema);
 
 
@@ -106,39 +106,43 @@ passport.deserializeUser(function(user, done) {
 passport.use(new GoogleStrategy({
     clientID: CLIENT_ID,
     clientSecret: CLIENT_SECRETE,
-    callbackURL: "https://auto-g-codes.herokuapp.com/loggedIn",
-    // callbackURL: "/loggedIn",
+    // callbackURL: "https://auto-g-codes.herokuapp.com/loggedIn",
+    callbackURL: "/loggedIn",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
   },
   function(accessToken, refreshToken, profile, cb) {
     let userProfile = profile._json;
 
     User.findOne({
-      googleId: userProfile.sub
+      _id: userProfile.sub
     }, function(err, user) {
+      console.log(err);
       if (!err) {
+        console.log("userFOund---->:");
+        console.log(user);
         if (user) {
-
             if (user.verified) {
               console.log("Logged In as: " + userProfile.name);
               return cb(null, user)
             } else {
-              // console.log("Unauthorized user");
+              console.log("Logged in but Still Unauthorized");
               return cb(err);
             }
         } else {
-          // console.log("user not found - creating new user");
+          console.log("user not found - creating new user");
           let newUser = new User({
-            name: userProfile.name,
-            googleId: userProfile.sub,
+            username: userProfile.name,
+            _id: userProfile.sub,
             verified: false
           })
           newUser.save()
             .then(function() {
+              console.log("User Created Successfully");
               return cb(err);
             })
-            .catch(function() {
-              console.log("Saving error");
+            .catch(function(err) {
+              console.log("failed to create user");
+              console.log(err);
             });
         }
       } else {
@@ -379,7 +383,7 @@ app.route("/verifyUser")
   .post(function(req,res){
     let id = req.body.userID;
     console.log(id);
-    User.updateOne({googleId:id}, { verified: true },function(err,updated){
+    User.updateOne({_id:id}, { verified: true },function(err,updated){
       if(updated.n > 0){
         res.send(true);
       }else{
@@ -393,7 +397,7 @@ app.route("/verifyUser")
     .post(function(req,res){
       let id = req.body.userID;
       console.log(id);
-      User.updateOne({googleId:id}, { verified: false },function(err,updated){
+      User.updateOne({_id:id}, { verified: false },function(err,updated){
         if(updated.n > 0){
           res.send(true);
         }else{
@@ -422,7 +426,7 @@ app.route("/validatePassword")
     })
     .post(function(req, res) {
       pass = req.body.password;
-      console.log(pass);
+      // console.log(pass);
       if (pass === ADMINCONSOLE) {
         res.send(true);
       } else {
