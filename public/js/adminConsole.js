@@ -2,7 +2,9 @@ $(document).ready(function(){
   $("#error-message").fadeOut(3500);
 });
 
-
+function reload(){
+  location.reload();
+}
 
 function verifyUser(e){
   let password=prompt("Please Enter Console Password");
