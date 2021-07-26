@@ -402,7 +402,11 @@ app.post("/resourceStreet", function(req, res) {
 
 app.route("/adminInclude")
   .get(function(req, res) {
-    res.redirect("/")
+    // res.redirect("/") original code
+    res.render("adminAdd", {
+      body: new Body("G-code|Admin", "", ""),
+      location: null
+    })
   })
   .post(function(req, res) {
     let location = JSON.parse(req.body.locationJSONString);
@@ -412,6 +416,9 @@ app.route("/adminInclude")
       location: location
     })
   })
+
+
+  
 
 app.route("/adminConsole")
   .get(function(req, res) {
