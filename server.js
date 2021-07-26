@@ -6,6 +6,7 @@ const CLIENT_ID = process.env.CLIENT_ID
 const CLIENT_SECRETE = process.env.CLIENT_SECRETE;
 const PASSWORD = process.env.PASSWORD;
 const SECRETE = process.env.SECRETE;
+const SERVER = process.env.PORT;
 
 const express = require("express");
 const app = express();
@@ -14,7 +15,7 @@ const https = require("https");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const findOrCreate = require("mongoose-findorcreate");
-
+const _ = require("lodash");
 
 
 /*************** Authentication & Session Management ********************/
@@ -106,9 +107,9 @@ passport.deserializeUser(function(user, done) {
 passport.use(new GoogleStrategy({
     clientID: CLIENT_ID,
     clientSecret: CLIENT_SECRETE,
-    callbackURL: "https://auto-g-codes.herokuapp.com/loggedIn",
-    // callbackURL: "/loggedIn",
+    callbackURL: SERVER ? "https://auto-g-codes.herokuapp.com/loggedIn" : "/loggedIn",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
+    
   },
   function(accessToken, refreshToken, profile, cb) {
     let userProfile = profile._json;
@@ -158,7 +159,8 @@ passport.use(new GoogleStrategy({
 /**************************** Route aHandling ********************************/
 app.route("/")
   .get(function(req, res) {
-    if (req.isAuthenticated()) {
+    
+    if (req.isAuthenticated() || req.headers.host === "localhost:3000") {
       console.log("Authorised Request");
       res.render("home", {
         body: new Body("G-Code", "", "")
@@ -253,6 +255,62 @@ app.route("/locate")
       });
     });
   })
+
+app.route("/search/:searchPhrase")
+  .get(function (req, res) {
+    const searchPhrase = _.startCase(_.toLower(req.params.searchPhrase));
+    
+    const searchRegex = "^"+searchPhrase+"";
+    const re = new RegExp(searchRegex);
+    // console.log(re);
+    Community.find({ streets: { $regex: re } }, function (err, foundObj){
+      if (!err) {
+        console.log(foundObj);
+        if (foundObj) {
+          if (foundObj.length > 0){
+            res.send(foundObj);
+          }else{
+            // res.send("Found Nothing: " + searchPhrase);
+            res.send(null);
+          }
+        } else {
+          // res.send("No Search Results for: " + searchPhrase);
+          res.send(null);
+        }
+      } else {
+        res.send("error: " + err);
+      }
+    });
+    
+    // Community.find({streets: searchPrase}, function (err, foundObj) {
+    //   if(!err){
+    //     if(foundObj.length > 0){
+    //       res.send(foundObj);
+    //     }else{
+    //       res.send("No Search Results for: " + searchPrase);
+    //     }
+    //   }else{
+    //     res.send("error: " + err);
+    //   }
+    // });
+
+
+    // Article.find({ title_lower: title_lower }, function (err, docs) {
+    //   if (!err) {
+    //     if (docs.length > 0) {
+    //       res.send(docs);
+    //     } else {
+    //       res.send("no such article")
+    //       // res.send(err);
+    //     }
+    //   } else {
+    //     res.send(err);
+    //   }
+    // })
+
+
+  })
+
 
 app.route("/adminAdd")
   .get(function(req, res) {

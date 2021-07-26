@@ -1,71 +1,125 @@
 <%- include('partials/header'); %>
 
-<p class="d-none mb-0" id="coord-x"></p>
-<p class="d-none mb-0" id="coord-y"></p>
-<!-- <p class="display-5 mt-4 " id="label"><%= location.label %></p> -->
-
-<div class="mt-5">
-  <p class="mb-0"> <em><b><%= community.communityName %></b> Community</em></p>
-  <p class="display-5 mb-4 " id="gateCode-description">
-    <i>Streets inside: </i>
-    <% for(street of community.streets){%>
-      <%=street+",  " %>
-    <% } %>
-   </p>
-   <div class="mt-4">
-     <% for (gateCode of community.gateCodes){ %>
-       <p class="mb-0 mt-3"><%=gateCode.description%></p>
-     <h1 class="display-2 font-weight-bold mt-0 mb-0" id="label">
-       <%= (gateCode.code.toString().length == 4 &&  gateCode.code.toString() !== "0000" )? "#" : "";%><%= gateCode.code %>
-     </h1>
-     <% } %>
-     </div>
-</div>
-<div class="mt-1 mb-1">
-  <form hidden class="d-none" id="geoCodeForm" action="adminInclude" method="post">
-    <textarea name="locationJSONString" rows="8" cols="30" ><%= JSON.stringify(location) %></textarea>
-  </form>
-  <% if(community.communityName === "Unregistered"){ %>
-    <p class="mb-1">Are you an admin?</p>
-  <!-- <span " class="btn btn-primary btn-xs">Include community </span> -->
+  <p class="d-none mb-0" id="coord-x"></p>
+  <p class="d-none mb-0" id="coord-y"></p>
+  <!-- <p class="display-5 mt-4 " id="label"><%= location.label %></p> -->
 
 
-  <!-- Button trigger modal -->
-  <button type="button"  class="btn btn-primary" onclick="focusOnAdminPass()" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
-Include community
-  </button>
 
-  <!-- Modal -->
-  <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h6 class="modal-title" id="staticBackdropLabel">Admin privilage required</h6>
-          <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+
+  <div class="dropdown mt-5">
+    <div class="" id="searchBarContainer" data-toggle="dropdown" aria-haspopup="false" aria-expanded="false">
+      <div class="input-group col-12 align-self-center">
+        <input autocomplete="off" type="text" onkeyup="find(this)" class="search-field form-control" id="search-field"
+          placeholder="Search Community or Street" aria-label="Street Name" aria-describedby="button-addon2">
+        <button onclick="search()" class="btn search-icon btn-outline-secondary" type="button" id="button-addon2"><i
+            class="fas fa-search"></i></button>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row ">
+        <div class="dropdown-menu col-12 py-4 px-3" id="resultList" aria-labelledby="searchResults">
+          <a class="dropdown-item text-center"> -- <em> Nothing to look for yet -- </em></a>
+
         </div>
-        <form id="accessForm" >
-        <div class="modal-body">
-            <p class="text-danger" id="error-message"> </p>
-            <div class="mb-3">
-              <!-- <label for="recipient-name" class="col-form-label">Recipient:</label> -->
-              <input type="password" class="form-control" placeholder="Type your Admin Password "  id="adminPass">
-            </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit"  class="btn btn-primary">Proceed</button>
-        </div>
-      </form>
       </div>
     </div>
   </div>
 
 
-    <% } %>
-</div>
-<a href="/" class="btn btn-danger mt-5">
-  <i class="fas fa-1x fa-sync"></i> REFRESH
-</a>
+
+  <div id="defaultInfo">
+    <div id="communityDescription">
+
+      <div class="mt-5">
+        <p class="mb-0"> <em><b>
+          <%= community.communityName %>
+        </b> Community</em></p>
+        <p class="display-5 mb-4 " id="gateCode-description">
+          <i>Streets inside: </i>
+          <% for(street of community.streets){%>
+            <%=street+", " %>
+            <% } %>
+          </p>
+        </div>
+  </div> 
+  <!-- this div clsing migh be a TYPO  -->
+  <div class=" mt-4">
+            <div id="defaultCode">
+              <% for (gateCode of community.gateCodes){ %>
+                <p class="mb-0 mt-3">
+                  <%=gateCode.description%>
+                </p>
+                <h1 class="display-2 font-weight-bold mt-0 mb-0" id="label">
+                  <%= (gateCode.code.toString().length==4 && gateCode.code.toString() !=="0000" )? "#" : "" ;%>
+                    <%= gateCode.code %>
+                </h1>
+                <% } %>
+            </div>
+            <div id="serchedCode">
+                  
+            </div>
+    </div>
+  </div>
+
+  <!-- // ************ uncomment this if any change in appearance -->
+  <div class="mt-1 mb-1" id="adminStuff">
+    <form hidden class="d-none" id="geoCodeForm" action="adminInclude" method="post">
+      <textarea name="locationJSONString" rows="8" cols="30"><%= JSON.stringify(location) %></textarea>
+    </form>
+
+    <!-- <div id="adminInclude"> -->
+      <% if(community.communityName==="Unregistered" ){ %>
+        <p class="mb-1">Are you an admin?</p>
+        <!-- <span " class="btn btn-primary btn-xs">Include community </span> -->
+        
+        
+        <!-- Button trigger modal -->
+        <button type="button" class="btn btn-primary" onclick="focusOnAdminPass()" data-bs-toggle="modal"
+        data-bs-target="#staticBackdrop">
+        Include community
+      </button>
+    <!-- </div> -->
+
+      <!-- Modal -->
+      <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+        aria-labelledby="staticBackdropLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h6 class="modal-title" id="staticBackdropLabel">Admin privilage required</h6>
+              <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close"><span
+                  aria-hidden="true">&times;</span></button>
+            </div>
+            <form id="accessForm">
+              <div class="modal-body">
+                <p class="text-danger" id="error-message"> </p>
+                <div class="mb-3">
+                  <!-- <label for="recipient-name" class="col-form-label">Recipient:</label> -->
+                  <input type="password" class="form-control" placeholder="Type your Admin Password " id="adminPass">
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">Proceed</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
 
 
-<%- include('partials/footer'); %>
+      <% } %>
+  </div>
+
+  </div>
+  <!-- end of defaultInfo -->
+
+  <a href="/" class="btn btn-danger mt-5">
+    <i class="fas fa-1x fa-sync"></i> REFRESH
+  </a>
+
+
+
+  <%- include('partials/footer'); %>

@@ -3,3 +3,16 @@
   /* transition: all 1s ease-out; */
   /* transition: margin-top 2s, color 1s; */
 }
+
+footer{
+  z-index: -1;
+}
+
+body{
+
+}
+
+.search-icon{
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}

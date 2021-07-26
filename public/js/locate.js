@@ -77,6 +77,7 @@ function includeCommunity(){
 }
 
 function focusOnAdminPass(){
+  console.log("include clicked");
   $('#staticBackdrop').on('shown.bs.modal', function () {
       $('#adminPass').focus();
   });
