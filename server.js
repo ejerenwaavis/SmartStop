@@ -263,7 +263,7 @@ app.route("/search/:searchPhrase")
     const searchRegex = "^"+searchPhrase+"";
     const re = new RegExp(searchRegex);
     // console.log(re);
-    Community.find({ streets: { $regex: re } }, function (err, foundObj){
+    Community.find({$or: [{streets: { $regex: re }}, {communityName:{ $regex: re }}] }, function (err, foundObj){
       if (!err) {
         console.log(foundObj);
         if (foundObj) {
@@ -418,7 +418,7 @@ app.route("/adminInclude")
   })
 
 
-  
+
 
 app.route("/adminConsole")
   .get(function(req, res) {
