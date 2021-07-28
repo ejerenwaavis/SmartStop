@@ -25,9 +25,11 @@ function success(position) {
 
 
 function error(error) {
-  console.log(error);
-  $('#coord-x').text(error);
-  $('#coord-y').text(error);
+  // console.log(error);
+  if (error.message === "User denied Geolocation") {
+    $("#gpsError").text("Hmmm... It seems your location is turned off, try turning it on and then refresh the page.");
+    console.log("User denied access to GeoLocation");
+  }
 }
 
 
@@ -49,7 +51,7 @@ const getCurrentStreetName = new Promise(function (resolve,reject){
   let coords =   position.coords.latitude +","+ position.coords.longitude;
   const data = { position: coords }
     $.post(url,data,function(result){resolve(result);});
-  })
+  }).catch(error)
 })
 
 
