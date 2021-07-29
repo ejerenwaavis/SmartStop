@@ -268,7 +268,7 @@ app.route("/search/:searchPhrase")
         console.log(foundObj);
         if (foundObj) {
           if (foundObj.length > 0){
-            res.send(foundObj);
+            res.send(foundObj); 
           }else{
             // res.send("Found Nothing: " + searchPhrase);
             res.send(null);
