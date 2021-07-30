@@ -5,7 +5,7 @@
 
 <form require action="/adminAdd" method="POST" id="add-community-form" autocomplete="on">
   <div class="col-lg-6 offset-lg-3">
-    <input type="text" autofocus name="communityName" class="mb-2 form-control" id="communityName" placeholder="Community Name">
+    <input type="text" autofocus name="communityName" value='<%= location? location.communityName : "" %>' class="mb-2 form-control" id="communityName" placeholder="Community Name">
 
     <div class="row gate-code-container">
       <div class="input-group mb-2 col-6">
@@ -31,15 +31,22 @@
 
     <div class="row city-state-container">
       <div class="input-group mb-2 col-6">
-        <input type="text" id="city" name="city" value="<%= location ? location.city:"" %>"  class="form-control city" placeholder="City Name" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
+        <input type="text" id="city" name="city" value='<%= location ? location.city:"" %>'  class="form-control city" placeholder="City Name" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
 
       </div>
       <div class="input-group mb-2 col-6">
-          <input required id="stateCode" type="text" name="stateCode" value="<%= location? location.stateCode : "" %>" class="form-control gate-code" placeholder="State Code" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
+          <input required id="stateCode" type="text" name="stateCode" value='<%= location? location.stateCode : "" %>' class="form-control gate-code" placeholder="State Code" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
       </div>
     </div>
 
+    
+  </div>
 
+  <div class="container mt-2">
+    <div class="input-group mb-2">
+      <input required type="password" value="" autocomplete="on"
+        class="mb-2 form-control " id="password" name="password" placeholder="Admin Password">
+    </div>
   </div>
   <div class="col-lg-6 offset-lg-3 mt-2">
     <button type="button" onclick="sendForm()" class="btn btn-primary btn-block">Add</button>

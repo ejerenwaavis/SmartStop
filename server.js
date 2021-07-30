@@ -318,14 +318,8 @@ app.route("/adminAdd")
     res.redirect("/");
   })
   .post(function(req, res) {
-    /*
-        let communityName = req.body.communityName;
-        let stateCode = req.body.stateCode;
-        let city = req.body.city;
-        let strObj = JSON.parse(req.body.streetsJSON); //stringified array of stret names
-        let gateCodesObj = JSON.parse(req.body.gateCodesJSON); // Stringified array of gateCode Objects being extracted to JSON
-    */
 
+    // console.log(req.body.password);
     const community = new Community({
       communityName: (req.body.communityName.trim()) ? req.body.communityName.trim() : "-- Missing Name --" ,
       streets: JSON.parse(req.body.streetsJSON), //array of location objects
@@ -334,75 +328,63 @@ app.route("/adminAdd")
       gateCodes: JSON.parse(req.body.gateCodesJSON), // array of gateCode Objects
     });
 
-    Community.exists({
-      communityName: community.communityName
-    }, function(err, exists) {
-      if (!exists) {
-        // console.log("No duplicates found");
-        community.save(function(err, savedDoc) {
-          if (!err) {
-            const communityResult = {
-              streets: savedDoc.streets,
-              communityName: savedDoc.communityName,
-              gateCodes: savedDoc.gateCodes
-            }
-            res.render("home", {
-              body: new Body("G-code", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt"),
-              community: communityResult
-            });
-          } else {
-            res.render("code", {
-              body: new Body("G-code|Admin", "Error: Failed to save the gate codes --> " + err, ""),
-              location: community
-            })
-          }
-        });
-      } else {
-        console.log("found duplicate");
-        // console.log(community.streets);
-        Community.findOneAndUpdate({ communityName: community.communityName }, 
-          { $push: { streets: { $each: community.streets }, gateCodes: { $each: community.gateCodes } }, },
-          function(err, update){
-            if(!err){
-              res.render("adminAdd", {
-                body: new Body("G-code|Admin", "Community '" + community.communityName + "', alread exists", ""),
-                location: community
+    if (req.body.password === ADMINPASS){
+      // console.log("Admin Pass Confirmed");
+      Community.exists({
+        communityName: community.communityName
+      }, function(err, exists) {
+        if (!exists) {
+          // console.log("No duplicates found");
+          community.save(function(err, savedDoc) {
+            if (!err) {
+              const communityResult = {
+                streets: savedDoc.streets,
+                communityName: savedDoc.communityName,
+                gateCodes: savedDoc.gateCodes
+              }
+              res.render("home", {
+                body: new Body("G-code", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt"),
+                community: communityResult
               });
-            }else{
-              console.log("Encountered error: ");
-              console.log(err);
-              // console.log(exists);
-              res.render("adminAdd", {
-                body: new Body("G-code|Admin", "Error: "+err.message, ""),
+            } else {
+              res.render("code", {
+                body: new Body("G-code|Admin", "Error: Failed to save the gate codes --> " + err, ""),
                 location: community
-              });
+              })
             }
           });
-        
-        
-      }
-    });
-    /*
-        community.save(function(err, savedDoc) {
-          if (!err) {
-            // res.send(savedDoc);
-            const communityResult = {
-              streets: savedDoc.streets,
-              communityName: savedDoc.communityName,
-              gateCodes: savedDoc.gateCodes
-            }
-            res.render("home", {
-              body: new Body("G-code", "", "Succesfully added " + savedDoc.communityName + " communityt"),
-              community: communityResult
+        } else {
+          console.log("found duplicate");
+          // console.log(community.streets);
+          Community.findOneAndUpdate({ communityName: community.communityName }, 
+            { $push: { streets: { $each: community.streets }, gateCodes: { $each: community.gateCodes } }, },
+            function(err, update){
+              if(!err){
+                res.render("adminAdd", {
+                  body: new Body("G-code|Admin", "", "Community '" + community.communityName + "', was updated successfully"),
+                  location: null
+                });
+              }else{
+                console.log("Encountered error: ");
+                console.log(err);
+                // console.log(exists);
+                res.render("adminAdd", {
+                  body: new Body("G-code|Admin", "Error: "+err.message, ""),
+                  location: community
+                });
+              }
             });
-          } else {
-            res.render("adminAdd", {
-              body: new Body("G-code|Admin", "Error: Failed to save the gate codes", "")
-            })
-          }
-        });
-        */
-
+          
+          
+        }
+      });
+    }else{
+      console.log("No Admin Password");
+      res.render("adminAdd", {
+        body: new Body("G-code|Admin", "Error: Invalid Passord"),
+        location: community
+      });
+    }
   })
 
 app.post("/resourceStreet", function(req, res) {
