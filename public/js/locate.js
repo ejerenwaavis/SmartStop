@@ -78,6 +78,12 @@ function includeCommunity(){
   }
 }
 
+
+function submitGeoCodeForm(){
+  console.log("submitting geocode form");
+  $("#geoCodeForm").submit();
+}
+
 function focusOnAdminPass(){
   console.log("include clicked");
   $('#staticBackdrop').on('shown.bs.modal', function () {

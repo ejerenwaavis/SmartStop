@@ -60,7 +60,8 @@ app.use(passport.session());
 const uri = "mongodb+srv://Admin-Avis:" + PASSWORD + "@db1.s2pl8.mongodb.net/auto-g-codes-0";
 mongoose.connect(uri, {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+  useFindAndModify: false
 });
 mongoose.set("useCreateIndex", true);
 
@@ -265,7 +266,7 @@ app.route("/search/:searchPhrase")
     // console.log(re);
     Community.find({$or: [{streets: { $regex: re }}, {communityName:{ $regex: re }}] }, function (err, foundObj){
       if (!err) {
-        console.log(foundObj);
+        // console.log(foundObj);
         if (foundObj) {
           if (foundObj.length > 0){
             res.send(foundObj); 
@@ -326,10 +327,10 @@ app.route("/adminAdd")
     */
 
     const community = new Community({
-      communityName: req.body.communityName,
+      communityName: (req.body.communityName.trim()) ? req.body.communityName.trim() : "-- Missing Name --" ,
       streets: JSON.parse(req.body.streetsJSON), //array of location objects
-      city: req.body.city,
-      stateCode: req.body.stateCode,
+      city: req.body.city.trim(),
+      stateCode: req.body.stateCode.trim(),
       gateCodes: JSON.parse(req.body.gateCodesJSON), // array of gateCode Objects
     });
 
@@ -358,10 +359,27 @@ app.route("/adminAdd")
         });
       } else {
         console.log("found duplicate");
-        res.render("adminAdd", {
-          body: new Body("G-code|Admin", "Community '" + community.communityName + "', alread exists", ""),
-          location: community
-        });
+        // console.log(community.streets);
+        Community.findOneAndUpdate({ communityName: community.communityName }, 
+          { $push: { streets: { $each: community.streets }, gateCodes: { $each: community.gateCodes } }, },
+          function(err, update){
+            if(!err){
+              res.render("adminAdd", {
+                body: new Body("G-code|Admin", "Community '" + community.communityName + "', alread exists", ""),
+                location: community
+              });
+            }else{
+              console.log("Encountered error: ");
+              console.log(err);
+              // console.log(exists);
+              res.render("adminAdd", {
+                body: new Body("G-code|Admin", "Error: "+err.message, ""),
+                location: community
+              });
+            }
+          });
+        
+        
       }
     });
     /*
