@@ -4,10 +4,12 @@ function find(element) {
     if (searchPhrase.length > 2) {
         $.get("/search/" + searchPhrase + "", (communities) => {
             if (communities) {
-                // console.log(communities);
+                // console.log((JSON.stringify(communities)).replaceAll("'", "") );
                 $("#resultList").html("");
                 communities.map(community => {
-                    $("#resultList").append('<a class="dropdown-item text-truncate"  data=\'' + JSON.stringify(community) + '\' onclick="showCode(this)"><strong>' + community.communityName + '</strong>, ' + community.streets.join(', ') + '</a> ')
+                    var stringifiedCommunity = (JSON.stringify(community)).replaceAll("'", "");
+                    // console.log(stringifiedCommunity);
+                    $("#resultList").append('<a class="dropdown-item text-truncate"  data=\'' + stringifiedCommunity + '\' onclick="showCode(this)"><strong>' + community.communityName + '</strong>, ' + community.streets.join(', ') + '</a> ')
                 });
             } else {
                 $("#resultList").html(noResults)
