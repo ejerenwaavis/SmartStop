@@ -26,6 +26,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 
 
+
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({
   extended: true
