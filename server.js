@@ -358,7 +358,7 @@ app.route("/adminAdd")
           console.log("found duplicate");
           // console.log(community.streets);
           Community.findOneAndUpdate({ communityName: community.communityName }, 
-            { $push: { streets: { $each: community.streets }, gateCodes: { $each: community.gateCodes } }, },
+            { $addToSet: { streets: { $each: community.streets }, gateCodes: { $each: community.gateCodes } }, },
             function(err, update){
               if(!err){
                 res.render("adminAdd", {
