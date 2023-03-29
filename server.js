@@ -7,6 +7,7 @@ const CLIENT_SECRETE = process.env.CLIENT_SECRETE;
 const PASSWORD = process.env.PASSWORD;
 const SECRETE = process.env.SECRETE;
 const SERVER = process.env.PORT;
+const APP_DIRECTORY = process.env.APP_DIRECTORY;
 
 const express = require("express");
 const app = express();
@@ -109,7 +110,7 @@ passport.deserializeUser(function(user, done) {
 passport.use(new GoogleStrategy({
     clientID: CLIENT_ID,
     clientSecret: CLIENT_SECRETE,
-    callbackURL: SERVER ? "https://auto-g-codes.herokuapp.com/loggedIn" : "/loggedIn",
+    callbackURL: SERVER ? "https://auto-g-codes.herokuapp.com/loggedIn" : APP_DIRECTORY+"/loggedIn",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
     
   },
@@ -159,7 +160,7 @@ passport.use(new GoogleStrategy({
 
 
 /**************************** Route aHandling ********************************/
-app.route("/")
+app.route(APP_DIRECTORY+"/")
   .get(function(req, res) {
     
     if (req.isAuthenticated() || req.headers.host === "localhost:3000") {
@@ -173,7 +174,7 @@ app.route("/")
     }
   })
 
-app.route("/login")
+app.route(APP_DIRECTORY+"/login")
   .get(function(req, res) {
     res.render("login", {
       body: new Body("Login", "", "")
@@ -184,7 +185,7 @@ app.get('/auth/google', passport.authenticate('google', {
   scope: ['profile']
 }));
 
-app.route("/loggedIn")
+app.route(APP_DIRECTORY+"/loggedIn")
   .get(passport.authenticate('google', {
       failureRedirect: '/login'
     }),
@@ -199,7 +200,7 @@ app.route("/loggedIn")
     })
 
 
-app.route("/logout")
+app.route(APP_DIRECTORY+"/logout")
   .get(function(req, res) {
     req.logout();
     console.log("Logged Out");
@@ -207,7 +208,7 @@ app.route("/logout")
     // res.render("ho", {body:new Body("Login","","Logged out Successfully")})
   });
 
-app.route("/locate")
+app.route(APP_DIRECTORY+"/locate")
   .get(function(req, res) {
     res.redirect("/");
   })
@@ -258,7 +259,7 @@ app.route("/locate")
     });
   })
 
-app.route("/search/:searchPhrase")
+app.route(APP_DIRECTORY+"/search/:searchPhrase")
   .get(function (req, res) {
     const searchPhrase = _.startCase(_.toLower(req.params.searchPhrase));
     
@@ -314,7 +315,7 @@ app.route("/search/:searchPhrase")
   })
 
 
-app.route("/adminAdd")
+app.route(APP_DIRECTORY+"/adminAdd")
   .get(function(req, res) {
     res.redirect("/");
   })
@@ -401,7 +402,7 @@ app.post("/resourceStreet", function(req, res) {
   });
 });
 
-app.route("/adminInclude")
+app.route(APP_DIRECTORY+"/adminInclude")
   .get(function(req, res) {
     // res.redirect("/") original code
     res.render("adminAdd", {
@@ -421,7 +422,7 @@ app.route("/adminInclude")
 
 
 
-app.route("/adminConsole")
+app.route(APP_DIRECTORY+"/adminConsole")
   .get(function(req, res) {
     User.find({}, function(err, foundUsers) {
       if (!err) {
@@ -445,7 +446,7 @@ app.route("/adminConsole")
     });
   })
 
-app.route("/verifyUser")
+app.route(APP_DIRECTORY+"/verifyUser")
   .post(function(req,res){
     let id = req.body.userID;
     console.log(id);
@@ -459,7 +460,7 @@ app.route("/verifyUser")
     })
   })
 
-  app.route("/restrictUser")
+  app.route(APP_DIRECTORY+"/restrictUser")
     .post(function(req,res){
       let id = req.body.userID;
       console.log(id);
@@ -473,7 +474,7 @@ app.route("/verifyUser")
       })
     })
 
-app.route("/validatePassword")
+app.route(APP_DIRECTORY+"/validatePassword")
   .get(function(req, res) {
     res.send(false);
   })
@@ -486,7 +487,7 @@ app.route("/validatePassword")
     }
   })
 
-  app.route("/validateConsolePassword")
+  app.route(APP_DIRECTORY+"/validateConsolePassword")
     .get(function(req, res) {
       res.send(false);
     })
