@@ -1,15 +1,17 @@
+
+const domain = $('#domain').attr('domain');
+// console.log(domain);
+
 $("document").ready(function(){
   $("#accessForm").on("submit", function(e){
      e.preventDefault();
       includeCommunity();
   });
-
 });
 
 let x = 0;
 let y = 0;
 let geoPosition = 0;
-
 
 
 function success(position) {
@@ -46,7 +48,7 @@ const getGecode = new Promise(function(resolve,reject){
 })
 
 const getCurrentStreetName = new Promise(function (resolve,reject){
-  const url='/resourceStreet';
+  const url = domain+'/resourceStreet';
   getGecode.then(function(position){
   let coords =   position.coords.latitude +","+ position.coords.longitude;
   const data = { position: coords }
@@ -61,7 +63,7 @@ function includeCommunity(){
   var adminPass = $("#adminPass").val().trim();
 
   if (adminPass) {
-      $.post("/validatePassword", {password:adminPass},function(data){
+      $.post(domain+"/validatePassword", {password:adminPass},function(data){
         if(data === true){
           $("#geoCodeForm").submit();
         }else{

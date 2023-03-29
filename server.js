@@ -166,18 +166,18 @@ app.route(APP_DIRECTORY+"/")
     if (req.isAuthenticated() || req.headers.host === "localhost:3000") {
       console.log("Authorised Request");
       res.render("home", {
-        body: new Body("G-Code", "", "")
+        body: new Body("G-Code", "", "", APP_DIRECTORY)
       });
     } else {
       console.log("UN-authenticated Request");
-      res.redirect("/login");
+      res.redirect(APP_DIRECTORY+"/login");
     }
   })
 
 app.route(APP_DIRECTORY+"/login")
   .get(function(req, res) {
     res.render("login", {
-      body: new Body("Login", "", "")
+      body: new Body("Login", "", "", APP_DIRECTORY)
     });
   })
 
@@ -193,9 +193,9 @@ app.route(APP_DIRECTORY+"/loggedIn")
       // Successful authentication, redirect user page.
       // console.log("Logged IN");
       // console.log(user);
-      // res.redirect("/");
+      // res.redirect(APP_DIRECTORY+"/");
       res.render('home', {
-        body: new Body("G-Code", "", "Google Authentication Successful")
+        body: new Body("G-Code", "", "Google Authentication Successful", APP_DIRECTORY)
       });
     })
 
@@ -204,13 +204,13 @@ app.route(APP_DIRECTORY+"/logout")
   .get(function(req, res) {
     req.logout();
     console.log("Logged Out");
-    res.redirect("/");
-    // res.render("ho", {body:new Body("Login","","Logged out Successfully")})
+    res.redirect(APP_DIRECTORY+"/");
+    // res.render("ho", {body:new Body("Login","","Logged out Successfully", APP_DIRECTORY)})
   });
 
 app.route(APP_DIRECTORY+"/locate")
   .get(function(req, res) {
-    res.redirect("/");
+    res.redirect(APP_DIRECTORY+"/");
   })
   .post(function(req, res) {
     const position = req.body.position;
@@ -232,7 +232,7 @@ app.route(APP_DIRECTORY+"/locate")
               }
               // res.send(foundObj);
               res.render("code", {
-                body: new Body("G-Code", "", ""),
+                body: new Body("G-Code", "", "", APP_DIRECTORY),
                 community: communityResult,
                 location: location
               })
@@ -245,7 +245,7 @@ app.route(APP_DIRECTORY+"/locate")
               }
               // res.send(communityResult);
               res.render("code", {
-                body: new Body("G-Code", "Unregistered Community", ""),
+                body: new Body("G-Code", "Unregistered Community", "", APP_DIRECTORY),
                 community: communityResult,
                 location: location
               });
@@ -317,7 +317,7 @@ app.route(APP_DIRECTORY+"/search/:searchPhrase")
 
 app.route(APP_DIRECTORY+"/adminAdd")
   .get(function(req, res) {
-    res.redirect("/");
+    res.redirect(APP_DIRECTORY+"/");
   })
   .post(function(req, res) {
 
@@ -346,11 +346,11 @@ app.route(APP_DIRECTORY+"/adminAdd")
               }
               res.render("home", {
                 body: new Body("G-code", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt"),
-                community: communityResult
+                community: communityResult, APP_DIRECTORY
               });
             } else {
               res.render("code", {
-                body: new Body("G-code|Admin", "Error: Failed to save the gate codes --> " + err, ""),
+                body: new Body("G-code|Admin", "Error: Failed to save the gate codes --> " + err, "", APP_DIRECTORY),
                 location: community
               })
             }
@@ -364,14 +364,14 @@ app.route(APP_DIRECTORY+"/adminAdd")
               if(!err){
                 res.render("adminAdd", {
                   body: new Body("G-code|Admin", "", "Community '" + community.communityName + "', was updated successfully"),
-                  location: null
+                  location: null, APP_DIRECTORY
                 });
               }else{
                 console.log("Encountered error: ");
                 console.log(err);
                 // console.log(exists);
                 res.render("adminAdd", {
-                  body: new Body("G-code|Admin", "Error: "+err.message, ""),
+                  body: new Body("G-code|Admin", "Error: "+err.message, "", APP_DIRECTORY),
                   location: community
                 });
               }
@@ -383,13 +383,13 @@ app.route(APP_DIRECTORY+"/adminAdd")
     }else{
       console.log("No Admin Password");
       res.render("adminAdd", {
-        body: new Body("G-code|Admin", "Error: Invalid Passord"),
+        body: new Body("G-code|Admin", "Error: Invalid Passord", APP_DIRECTORY),
         location: community
       });
     }
   })
 
-app.post("/resourceStreet", function(req, res) {
+app.post(APP_DIRECTORY+"/resourceStreet", function(req, res) {
   const position = req.body.position;
   // console.log("RESOURCE: " + position);
   const url = 'https://revgeocode.search.hereapi.com/v1/revgeocode?apiKey=' + APIKEY + '&at=' + position + '&lang=en-US'
@@ -404,9 +404,9 @@ app.post("/resourceStreet", function(req, res) {
 
 app.route(APP_DIRECTORY+"/adminInclude")
   .get(function(req, res) {
-    // res.redirect("/") original code
+    // res.redirect(APP_DIRECTORY+"/") original code
     res.render("adminAdd", {
-      body: new Body("G-code|Admin", "", ""),
+      body: new Body("G-code|Admin", "", "", APP_DIRECTORY),
       location: null
     })
   })
@@ -414,7 +414,7 @@ app.route(APP_DIRECTORY+"/adminInclude")
     let location = JSON.parse(req.body.locationJSONString);
     // console.log(location);
     res.render("adminAdd", {
-      body: new Body("G-code|Admin", "", ""),
+      body: new Body("G-code|Admin", "", "", APP_DIRECTORY),
       location: location
     })
   })
@@ -428,18 +428,18 @@ app.route(APP_DIRECTORY+"/adminConsole")
       if (!err) {
         if (foundUsers) {
           res.render("adminConsole", {
-            body: new Body("Admin Console", "", ""),
+            body: new Body("Admin Console", "", "", APP_DIRECTORY),
             users: foundUsers
           });
         } else {
           res.render("adminConsole", {
-            body: new Body("Admin Console", "No Users Found", ""),
+            body: new Body("Admin Console", "No Users Found", "", APP_DIRECTORY),
             users: undefined
           });
         }
       } else {
         res.render("adminConsole", {
-          body: new Body("Admin Console", "Unable to Search the database", ""),
+          body: new Body("Admin Console", "Unable to Search the database", "", APP_DIRECTORY),
           users: undefined
         });
       }
@@ -512,8 +512,10 @@ function allowedUser(userID) {
 
 }
 
-function Body(title, error, message) {
+function Body(title, error, message, appDir) {
   this.title = title;
   this.error = error;
   this.message = message;
+  this.domain = appDir;
 }
+
