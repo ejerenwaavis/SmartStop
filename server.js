@@ -163,7 +163,8 @@ passport.use(new GoogleStrategy({
 app.route(APP_DIRECTORY+"/")
   .get(function(req, res) {
     
-    if (req.isAuthenticated() || req.headers.host === "localhost:3000") {
+    // if (req.isAuthenticated() || req.headers.host === "localhost:3000") {
+    if (req.isAuthenticated() ) {
       console.log("Authorised Request");
       res.render("home", {
         body: new Body("G-Code", "", "", APP_DIRECTORY)
@@ -181,13 +182,13 @@ app.route(APP_DIRECTORY+"/login")
     });
   })
 
-app.get('/auth/google', passport.authenticate('google', {
+app.get(APP_DIRECTORY+'/auth/google', passport.authenticate('google', {
   scope: ['profile']
 }));
 
 app.route(APP_DIRECTORY+"/loggedIn")
   .get(passport.authenticate('google', {
-      failureRedirect: '/login'
+      failureRedirect: APP_DIRECTORY+'/login'
     }),
     function(req, res) {
       // Successful authentication, redirect user page.
