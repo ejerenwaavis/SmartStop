@@ -63,7 +63,7 @@
 
   <!-- // ************ uncomment this if any change in appearance -->
   <div class="mt-1 mb-1" id="adminStuff">
-    <form hidden class="d-none" id="geoCodeForm" action="adminInclude" method="post">
+    <form hidden class="d-none" id="geoCodeForm" action="<%= body.domain %>adminInclude" method="post">
       <textarea name="locationJSONString" rows="8" cols="30"><%= JSON.stringify(location) %></textarea>
     </form>
 
