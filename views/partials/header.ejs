@@ -7,7 +7,10 @@
   <meta name="description" content="">
   <meta name="author" content="Mark Otto, Jacob Thornton, and Bootstrap contributors">
   <meta name="generator" content="Jekyll v4.1.1">
-  <title><%= body.title %></title>
+  <title><%= body.title %> · TCS</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="<%= body.publicFolder %>img/Logo-SVG.svg">
 
 
   <!-- Bootstrap core CSS -->
@@ -18,7 +21,7 @@
 
 
   <!-- Custom styles for this template -->
-  <link href="css/admin-form.css" type="text/css" rel="stylesheet">
+  <link href="<%= body.publicFolder %>css/admin-form.css" type="text/css" rel="stylesheet">
 </head>
 
 <body class="text-center">
@@ -32,6 +35,5 @@
 
 
 <!-- *******************DOMAIN HANDLING*************************** -->
-<h3 class="d-none" id="domain" domain="<%= body.domain %>">
-    <%= body.domain %> / <%= body.title %>
-  </h3>
+<span class="d-none" id="domain" domain="<%= body.domain %>">
+</span>

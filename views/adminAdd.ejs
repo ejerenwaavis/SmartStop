@@ -3,7 +3,7 @@
 <h3 class="display-5 mt-5 mb-5">Admin Add</h3>
 <p id="error-message" class="text-danger display-5 mt-5 mb-5"><%=body.error%></p>
 
-<form require action="/adminAdd" method="POST" id="add-community-form" autocomplete="on">
+<form require action="<%= body.domain %>/adminAdd" method="POST" id="add-community-form" autocomplete="on">
   <div class="col-lg-6 offset-lg-3">
     <input type="text" autofocus name="communityName" value='<%= location? location.communityName : "" %>' class="mb-2 form-control" id="communityName" placeholder="Community Name">
 

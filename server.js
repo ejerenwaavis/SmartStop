@@ -6,8 +6,11 @@ const CLIENT_ID = process.env.CLIENT_ID
 const CLIENT_SECRETE = process.env.CLIENT_SECRETE;
 const PASSWORD = process.env.PASSWORD;
 const SECRETE = process.env.SECRETE;
-const SERVER = process.env.PORT;
+
+/*********Handling Server / Local Enviromnemnt sensitive variables************/
+const SERVER = !(process.execPath.includes("C:")); //process.env.PORT;
 const APP_DIRECTORY = process.env.APP_DIRECTORY;
+const PUBLIC_FOLDER = (SERVER) ? "./" : "../";
 
 const express = require("express");
 const app = express();
@@ -33,6 +36,8 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 app.use(express.static("public"));
+// app.use(express.static(APP_DIRECTORY+"/public"));
+// app.use( express.static('public'));
 
 //Forcing https so as to allow frontend geolocation work properly
 /* app.use (function (req, res, next) {
@@ -59,7 +64,7 @@ app.use(passport.session());
 
 
 
-const uri = "mongodb+srv://Admin-Avis:" + PASSWORD + "@db1.s2pl8.mongodb.net/auto-g-codes-0";
+const uri = "mongodb+srv://Admin-Avis:" + PASSWORD + "@db1.s2pl8.mongodb.net/auto-SmartStops-0";
 mongoose.connect(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -110,7 +115,7 @@ passport.deserializeUser(function(user, done) {
 passport.use(new GoogleStrategy({
     clientID: CLIENT_ID,
     clientSecret: CLIENT_SECRETE,
-    callbackURL: SERVER ? "https://auto-g-codes.herokuapp.com/loggedIn" : APP_DIRECTORY+"/loggedIn",
+    callbackURL: (SERVER ? "https://triumphcourier.com" : "" ) + APP_DIRECTORY+"/loggedIn",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
     
   },
@@ -167,7 +172,7 @@ app.route(APP_DIRECTORY+"/")
     if (req.isAuthenticated() ) {
       console.log("Authorised Request");
       res.render("home", {
-        body: new Body("G-Code", "", "", APP_DIRECTORY)
+        body: new Body("SmartStop", "", "", APP_DIRECTORY)
       });
     } else {
       console.log("UN-authenticated Request");
@@ -184,7 +189,8 @@ app.route(APP_DIRECTORY+"/login")
 
 app.get(APP_DIRECTORY+'/auth/google', passport.authenticate('google', {
   scope: ['profile']
-}));
+}).
+);
 
 app.route(APP_DIRECTORY+"/loggedIn")
   .get(passport.authenticate('google', {
@@ -196,7 +202,7 @@ app.route(APP_DIRECTORY+"/loggedIn")
       // console.log(user);
       // res.redirect(APP_DIRECTORY+"/");
       res.render('home', {
-        body: new Body("G-Code", "", "Google Authentication Successful", APP_DIRECTORY)
+        body: new Body("SmartStop", "", "Google Authentication Successful", APP_DIRECTORY)
       });
     })
 
@@ -233,7 +239,7 @@ app.route(APP_DIRECTORY+"/locate")
               }
               // res.send(foundObj);
               res.render("code", {
-                body: new Body("G-Code", "", "", APP_DIRECTORY),
+                body: new Body("SmartStop", "", "", APP_DIRECTORY),
                 community: communityResult,
                 location: location
               })
@@ -246,7 +252,7 @@ app.route(APP_DIRECTORY+"/locate")
               }
               // res.send(communityResult);
               res.render("code", {
-                body: new Body("G-Code", "Unregistered Community", "", APP_DIRECTORY),
+                body: new Body("SmartStop", "Unregistered Community", "", APP_DIRECTORY),
                 community: communityResult,
                 location: location
               });
@@ -346,12 +352,12 @@ app.route(APP_DIRECTORY+"/adminAdd")
                 gateCodes: savedDoc.gateCodes
               }
               res.render("home", {
-                body: new Body("G-code", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt"),
+                body: new Body("SmartStop", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt"),
                 community: communityResult, APP_DIRECTORY
               });
             } else {
               res.render("code", {
-                body: new Body("G-code|Admin", "Error: Failed to save the gate codes --> " + err, "", APP_DIRECTORY),
+                body: new Body("SmartStop|Admin", "Error: Failed to save the gate codes --> " + err, "", APP_DIRECTORY),
                 location: community
               })
             }
@@ -364,7 +370,7 @@ app.route(APP_DIRECTORY+"/adminAdd")
             function(err, update){
               if(!err){
                 res.render("adminAdd", {
-                  body: new Body("G-code|Admin", "", "Community '" + community.communityName + "', was updated successfully"),
+                  body: new Body("SmartStop|Admin", "", "Community '" + community.communityName + "', was updated successfully"),
                   location: null, APP_DIRECTORY
                 });
               }else{
@@ -372,7 +378,7 @@ app.route(APP_DIRECTORY+"/adminAdd")
                 console.log(err);
                 // console.log(exists);
                 res.render("adminAdd", {
-                  body: new Body("G-code|Admin", "Error: "+err.message, "", APP_DIRECTORY),
+                  body: new Body("SmartStop|Admin", "Error: "+err.message, "", APP_DIRECTORY),
                   location: community
                 });
               }
@@ -384,7 +390,7 @@ app.route(APP_DIRECTORY+"/adminAdd")
     }else{
       console.log("No Admin Password");
       res.render("adminAdd", {
-        body: new Body("G-code|Admin", "Error: Invalid Passord", APP_DIRECTORY),
+        body: new Body("SmartStop|Admin", "Error: Invalid Passord", APP_DIRECTORY),
         location: community
       });
     }
@@ -407,7 +413,7 @@ app.route(APP_DIRECTORY+"/adminInclude")
   .get(function(req, res) {
     // res.redirect(APP_DIRECTORY+"/") original code
     res.render("adminAdd", {
-      body: new Body("G-code|Admin", "", "", APP_DIRECTORY),
+      body: new Body("SmartStop|Admin", "", "", APP_DIRECTORY),
       location: null
     })
   })
@@ -415,7 +421,7 @@ app.route(APP_DIRECTORY+"/adminInclude")
     let location = JSON.parse(req.body.locationJSONString);
     // console.log(location);
     res.render("adminAdd", {
-      body: new Body("G-code|Admin", "", "", APP_DIRECTORY),
+      body: new Body("SmartStop|Admin", "", "", APP_DIRECTORY),
       location: location
     })
   })
@@ -503,7 +509,7 @@ app.route(APP_DIRECTORY+"/validatePassword")
     })
 
 app.listen(process.env.PORT || 3000, function() {
-  console.log("GCodes is Live");
+  console.log("GCodes is Live on " + (SERVER? "Remote" : "Local") + " Server :: port: - " + process.env.PORT);
 })
 
 
@@ -518,5 +524,6 @@ function Body(title, error, message, appDir) {
   this.error = error;
   this.message = message;
   this.domain = appDir;
+  this.publicFolder = PUBLIC_FOLDER;
 }
 
