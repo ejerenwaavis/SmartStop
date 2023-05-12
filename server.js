@@ -64,7 +64,7 @@ app.use(passport.session());
 
 
 
-const uri = "mongodb+srv://Admin-Avis:" + PASSWORD + "@db1.s2pl8.mongodb.net/auto-SmartStops-0";
+const uri = "mongodb+srv://Admin-Avis:" + PASSWORD + "@db1.s2pl8.mongodb.net/auto-g-codes-0";
 mongoose.connect(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -189,7 +189,7 @@ app.route(APP_DIRECTORY+"/login")
 
 app.get(APP_DIRECTORY+'/auth/google', passport.authenticate('google', {
   scope: ['profile']
-}).
+})
 );
 
 app.route(APP_DIRECTORY+"/loggedIn")
@@ -202,7 +202,7 @@ app.route(APP_DIRECTORY+"/loggedIn")
       // console.log(user);
       // res.redirect(APP_DIRECTORY+"/");
       res.render('home', {
-        body: new Body("SmartStop", "", "Google Authentication Successful", APP_DIRECTORY)
+        body: new Body("SmartStop", "", "SmartStop Authentication Successful", APP_DIRECTORY)
       });
     })
 
