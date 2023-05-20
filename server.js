@@ -352,12 +352,12 @@ app.route(APP_DIRECTORY+"/adminAdd")
                 gateCodes: savedDoc.gateCodes
               }
               res.render("home", {
-                body: new Body("SmartStop", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt"),
-                community: communityResult, APP_DIRECTORY
+                body: new Body("Admin Add", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt", APP_DIRECTORY),
+                community: communityResult
               });
             } else {
               res.render("code", {
-                body: new Body("SmartStop|Admin", "Error: Failed to save the gate codes --> " + err, "", APP_DIRECTORY),
+                body: new Body("Admin Add", "Error: Failed to save the gate codes --> " + err, "", APP_DIRECTORY),
                 location: community
               })
             }
@@ -370,8 +370,8 @@ app.route(APP_DIRECTORY+"/adminAdd")
             function(err, update){
               if(!err){
                 res.render("adminAdd", {
-                  body: new Body("SmartStop|Admin", "", "Community '" + community.communityName + "', was updated successfully"),
-                  location: null, APP_DIRECTORY
+                  body: new Body("Admin", "", "Community '" + community.communityName + "', was updated successfully", APP_DIRECTORY),
+                  location: null
                 });
               }else{
                 console.log("Encountered error: ");
@@ -390,7 +390,7 @@ app.route(APP_DIRECTORY+"/adminAdd")
     }else{
       console.log("No Admin Password");
       res.render("adminAdd", {
-        body: new Body("SmartStop|Admin", "Error: Invalid Passord", APP_DIRECTORY),
+        body: new Body("Admin Add", "Error: Invalid Passord", APP_DIRECTORY),
         location: community
       });
     }
