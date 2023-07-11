@@ -1,4 +1,8 @@
-require("dotenv").config();
+const SERVER = !(process.execPath.includes("C:"));//process.env.PORT;
+if (!SERVER){
+  require("dotenv").config();
+}
+
 const APIKEY = process.env.APIKEY;
 const ADMINPASS = process.env.ADMINPASS;
 const ADMINCONSOLE = process.env.ADMINCONSOLE;
@@ -6,7 +10,6 @@ const CLIENT_ID = process.env.CLIENT_ID
 const CLIENT_SECRETE = process.env.CLIENT_SECRETE;
 const PASSWORD = process.env.PASSWORD;
 const SECRETE = process.env.SECRETE;
-const SERVER = process.env.PORT;
 
 const express = require("express");
 const app = express();
