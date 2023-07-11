@@ -6,7 +6,7 @@
 </div>
   <p class="display-5 pt-5 my-4 " id="gpsError"></p>
 
-<form class="d-none" id="location-form" action="/locate" method="POST">
+<form class="d-none" id="location-form" action='<%= body.domain %>/locate' method="POST">
   <input type="text" name="position" id="position" value="">
   <input type="submit" name="" value="">
 </form>

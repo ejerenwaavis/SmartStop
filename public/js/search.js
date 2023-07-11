@@ -2,7 +2,7 @@ function find(element) {
     const noResults = '<a class="dropdown-item text-center" href="#"><em>No match found, try suggesting an addition </em></a> '
     const searchPhrase = element.value;
     if (searchPhrase.length > 2) {
-        $.get("/search/" + searchPhrase + "", (communities) => {
+        $.get(domain+"/search/" + searchPhrase + "", (communities) => {
             if (communities) {
                 // console.log((JSON.stringify(communities)).replaceAll("'", "") );
                 $("#resultList").html("");

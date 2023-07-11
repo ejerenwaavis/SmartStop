@@ -1,3 +1,5 @@
+const domain = $('#domain').attr('domain');
+
 $(document).ready(function(){
   $("#error-message").fadeOut(3500);
 });
@@ -9,14 +11,14 @@ function reload(){
 function verifyUser(e){
   let password=prompt("Please Enter Console Password");
   if(password){
-    $.post("/validateConsolePassword", {password:password},function(accessGranted){
+    $.post(domain+"/validateConsolePassword", {password:password},function(accessGranted){
       if(accessGranted){
         let userID = e.id;
         let evt = $("#"+userID);
         let body = {
             userID:userID,
         }
-        $.post("/verifyUser", body, function(verified){
+        $.post(domain+"/verifyUser", body, function(verified){
           if(verified){
             evt.addClass("btn-outline-success");
             evt.removeClass("btn-outline-danger");
@@ -41,7 +43,7 @@ function verifyUser(e){
 function restrictUser(e){
   let password=prompt("Please Enter Console Password");
   if(password){
-    $.post("/validateConsolePassword", {password:password},function(accessGranted){
+    $.post(domain+"/validateConsolePassword", {password:password},function(accessGranted){
       if(accessGranted){
         let userID = e.id;
         let evt = $("#"+userID);
@@ -49,7 +51,7 @@ function restrictUser(e){
             userID:userID,
         }
 
-        $.post("/restrictUser", body, function(restricted){
+        $.post(domain+"/restrictUser", body, function(restricted){
           if(restricted){
             evt.addClass("btn-outline-danger").removeClass("btn-outline-success");
             evt[0].outerHTML = '<span id="'+userID+'" onclick="verifyUser(this)" class="verify-btn btn btn-outline-danger">Unverified <i id="'+userID+'" class="fas fa-user-times"></i></span>';

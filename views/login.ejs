@@ -19,8 +19,8 @@
       </div>
       <button class="btn btn-lg btn-primary btn-block mb-3" type="submit">Sign in</button> -->
       <p> For security measures, you are required to login with a google account, click the button below to continue.</p>
-      <a href="/auth/google" class="text-left  btn btn-lg btn-primary btn-block p-0 m-0">
-        <img src="img/google-icon-2.png" class="google-icon" alt="">
+      <a href="<%= body.domain %>/auth/google" class="text-left  btn btn-lg btn-primary btn-block p-0 m-0">
+        <img src="<%= body.publicFolder %>img/google-icon-2.png" class="google-icon" alt="">
         <span class="ml-4">
           Sign in with Google
         </span>
@@ -28,7 +28,7 @@
       <!-- <p class="mt-5 mb-3 text-muted">&copy; 2017-2018</p> -->
     </form>
 
-<form class="d-none" id="location-form" action="/locate" method="POST">
+<form class="d-none" id="location-form" action="<%= body.domain %>/locate" method="POST">
   <input type="text" name="position" id="position" value="">
   <input type="submit" name="" value="">
 </form>

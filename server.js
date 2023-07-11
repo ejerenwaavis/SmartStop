@@ -11,6 +11,11 @@ const CLIENT_SECRETE = process.env.CLIENT_SECRETE;
 const PASSWORD = process.env.PASSWORD;
 const SECRETE = process.env.SECRETE;
 
+/*********Handling Server / Local Enviromnemnt sensitive variables************/
+const SERVER = !(process.execPath.includes("C:")); //process.env.PORT;
+const APP_DIRECTORY = process.env.APP_DIRECTORY;
+const PUBLIC_FOLDER = (SERVER) ? "./" : "../";
+
 const express = require("express");
 const app = express();
 const ejs = require("ejs");
@@ -28,13 +33,13 @@ const passportLocalMongoose = require("passport-local-mongoose");
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 
-
-
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({
   extended: true
 }));
 app.use(express.static("public"));
+// app.use(express.static(APP_DIRECTORY+"/public"));
+// app.use( express.static('public'));
 
 //Forcing https so as to allow frontend geolocation work properly
  app.use (function (req, res, next) {
@@ -112,7 +117,7 @@ passport.deserializeUser(function(user, done) {
 passport.use(new GoogleStrategy({
     clientID: CLIENT_ID,
     clientSecret: CLIENT_SECRETE,
-    callbackURL: SERVER ? "https://auto-g-codes.herokuapp.com/loggedIn" : "/loggedIn",
+    callbackURL: (SERVER ? "https://triumphcourier.com" : "" ) + APP_DIRECTORY+"/loggedIn",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
     
   },
@@ -162,57 +167,59 @@ passport.use(new GoogleStrategy({
 
 
 /**************************** Route aHandling ********************************/
-app.route("/")
+app.route(APP_DIRECTORY+"/")
   .get(function(req, res) {
     
-    if (req.isAuthenticated() || req.headers.host === "localhost:3000") {
+    // if (req.isAuthenticated() || req.headers.host === "localhost:3000") {
+    if (req.isAuthenticated() ) {
       console.log("Authorised Request");
       res.render("home", {
-        body: new Body("G-Code", "", "")
+        body: new Body("SmartStop", "", "", APP_DIRECTORY)
       });
     } else {
       console.log("UN-authenticated Request");
-      res.redirect("/login");
+      res.redirect(APP_DIRECTORY+"/login");
     }
   })
 
-app.route("/login")
+app.route(APP_DIRECTORY+"/login")
   .get(function(req, res) {
     res.render("login", {
-      body: new Body("Login", "", "")
+      body: new Body("Login", "", "", APP_DIRECTORY)
     });
   })
 
-app.get('/auth/google', passport.authenticate('google', {
+app.get(APP_DIRECTORY+'/auth/google', passport.authenticate('google', {
   scope: ['profile']
-}));
+})
+);
 
-app.route("/loggedIn")
+app.route(APP_DIRECTORY+"/loggedIn")
   .get(passport.authenticate('google', {
-      failureRedirect: '/login'
+      failureRedirect: APP_DIRECTORY+'/login'
     }),
     function(req, res) {
       // Successful authentication, redirect user page.
       // console.log("Logged IN");
       // console.log(user);
-      // res.redirect("/");
+      // res.redirect(APP_DIRECTORY+"/");
       res.render('home', {
-        body: new Body("G-Code", "", "Google Authentication Successful")
+        body: new Body("SmartStop", "", "SmartStop Authentication Successful", APP_DIRECTORY)
       });
     })
 
 
-app.route("/logout")
+app.route(APP_DIRECTORY+"/logout")
   .get(function(req, res) {
     req.logout();
     console.log("Logged Out");
-    res.redirect("/");
-    // res.render("ho", {body:new Body("Login","","Logged out Successfully")})
+    res.redirect(APP_DIRECTORY+"/");
+    // res.render("ho", {body:new Body("Login","","Logged out Successfully", APP_DIRECTORY)})
   });
 
-app.route("/locate")
+app.route(APP_DIRECTORY+"/locate")
   .get(function(req, res) {
-    res.redirect("/");
+    res.redirect(APP_DIRECTORY+"/");
   })
   .post(function(req, res) {
     const position = req.body.position;
@@ -234,7 +241,7 @@ app.route("/locate")
               }
               // res.send(foundObj);
               res.render("code", {
-                body: new Body("G-Code", "", ""),
+                body: new Body("SmartStop", "", "", APP_DIRECTORY),
                 community: communityResult,
                 location: location
               })
@@ -247,7 +254,7 @@ app.route("/locate")
               }
               // res.send(communityResult);
               res.render("code", {
-                body: new Body("G-Code", "Unregistered Community", ""),
+                body: new Body("SmartStop", "Unregistered Community", "", APP_DIRECTORY),
                 community: communityResult,
                 location: location
               });
@@ -261,7 +268,7 @@ app.route("/locate")
     });
   })
 
-app.route("/search/:searchPhrase")
+app.route(APP_DIRECTORY+"/search/:searchPhrase")
   .get(function (req, res) {
     const searchPhrase = _.startCase(_.toLower(req.params.searchPhrase));
     
@@ -317,9 +324,9 @@ app.route("/search/:searchPhrase")
   })
 
 
-app.route("/adminAdd")
+app.route(APP_DIRECTORY+"/adminAdd")
   .get(function(req, res) {
-    res.redirect("/");
+    res.redirect(APP_DIRECTORY+"/");
   })
   .post(function(req, res) {
 
@@ -347,12 +354,12 @@ app.route("/adminAdd")
                 gateCodes: savedDoc.gateCodes
               }
               res.render("home", {
-                body: new Body("G-code", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt"),
+                body: new Body("Admin Add", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt", APP_DIRECTORY),
                 community: communityResult
               });
             } else {
               res.render("code", {
-                body: new Body("G-code|Admin", "Error: Failed to save the gate codes --> " + err, ""),
+                body: new Body("Admin Add", "Error: Failed to save the gate codes --> " + err, "", APP_DIRECTORY),
                 location: community
               })
             }
@@ -365,7 +372,7 @@ app.route("/adminAdd")
             function(err, update){
               if(!err){
                 res.render("adminAdd", {
-                  body: new Body("G-code|Admin", "", "Community '" + community.communityName + "', was updated successfully"),
+                  body: new Body("Admin", "", "Community '" + community.communityName + "', was updated successfully", APP_DIRECTORY),
                   location: null
                 });
               }else{
@@ -373,7 +380,7 @@ app.route("/adminAdd")
                 console.log(err);
                 // console.log(exists);
                 res.render("adminAdd", {
-                  body: new Body("G-code|Admin", "Error: "+err.message, ""),
+                  body: new Body("SmartStop|Admin", "Error: "+err.message, "", APP_DIRECTORY),
                   location: community
                 });
               }
@@ -385,13 +392,13 @@ app.route("/adminAdd")
     }else{
       console.log("No Admin Password");
       res.render("adminAdd", {
-        body: new Body("G-code|Admin", "Error: Invalid Passord"),
+        body: new Body("Admin Add", "Error: Invalid Passord", APP_DIRECTORY),
         location: community
       });
     }
   })
 
-app.post("/resourceStreet", function(req, res) {
+app.post(APP_DIRECTORY+"/resourceStreet", function(req, res) {
   const position = req.body.position;
   // console.log("RESOURCE: " + position);
   const url = 'https://revgeocode.search.hereapi.com/v1/revgeocode?apiKey=' + APIKEY + '&at=' + position + '&lang=en-US'
@@ -404,11 +411,11 @@ app.post("/resourceStreet", function(req, res) {
   });
 });
 
-app.route("/adminInclude")
+app.route(APP_DIRECTORY+"/adminInclude")
   .get(function(req, res) {
-    // res.redirect("/") original code
+    // res.redirect(APP_DIRECTORY+"/") original code
     res.render("adminAdd", {
-      body: new Body("G-code|Admin", "", ""),
+      body: new Body("SmartStop|Admin", "", "", APP_DIRECTORY),
       location: null
     })
   })
@@ -416,7 +423,7 @@ app.route("/adminInclude")
     let location = JSON.parse(req.body.locationJSONString);
     // console.log(location);
     res.render("adminAdd", {
-      body: new Body("G-code|Admin", "", ""),
+      body: new Body("SmartStop|Admin", "", "", APP_DIRECTORY),
       location: location
     })
   })
@@ -424,31 +431,31 @@ app.route("/adminInclude")
 
 
 
-app.route("/adminConsole")
+app.route(APP_DIRECTORY+"/adminConsole")
   .get(function(req, res) {
     User.find({}, function(err, foundUsers) {
       if (!err) {
         if (foundUsers) {
           res.render("adminConsole", {
-            body: new Body("Admin Console", "", ""),
+            body: new Body("Admin Console", "", "", APP_DIRECTORY),
             users: foundUsers
           });
         } else {
           res.render("adminConsole", {
-            body: new Body("Admin Console", "No Users Found", ""),
+            body: new Body("Admin Console", "No Users Found", "", APP_DIRECTORY),
             users: undefined
           });
         }
       } else {
         res.render("adminConsole", {
-          body: new Body("Admin Console", "Unable to Search the database", ""),
+          body: new Body("Admin Console", "Unable to Search the database", "", APP_DIRECTORY),
           users: undefined
         });
       }
     });
   })
 
-app.route("/verifyUser")
+app.route(APP_DIRECTORY+"/verifyUser")
   .post(function(req,res){
     let id = req.body.userID;
     console.log(id);
@@ -462,7 +469,7 @@ app.route("/verifyUser")
     })
   })
 
-  app.route("/restrictUser")
+  app.route(APP_DIRECTORY+"/restrictUser")
     .post(function(req,res){
       let id = req.body.userID;
       console.log(id);
@@ -476,7 +483,7 @@ app.route("/verifyUser")
       })
     })
 
-app.route("/validatePassword")
+app.route(APP_DIRECTORY+"/validatePassword")
   .get(function(req, res) {
     res.send(false);
   })
@@ -489,7 +496,7 @@ app.route("/validatePassword")
     }
   })
 
-  app.route("/validateConsolePassword")
+  app.route(APP_DIRECTORY+"/validateConsolePassword")
     .get(function(req, res) {
       res.send(false);
     })
@@ -504,7 +511,7 @@ app.route("/validatePassword")
     })
 
 app.listen(process.env.PORT || 3000, function() {
-  console.log("GCodes is Live");
+  console.log("GCodes is Live on " + (SERVER? "Remote" : "Local") + " Server :: port: - " + process.env.PORT);
 })
 
 
@@ -514,8 +521,11 @@ function allowedUser(userID) {
 
 }
 
-function Body(title, error, message) {
+function Body(title, error, message, appDir) {
   this.title = title;
   this.error = error;
   this.message = message;
+  this.domain = appDir;
+  this.publicFolder = PUBLIC_FOLDER;
 }
+
