@@ -511,7 +511,7 @@ app.route(APP_DIRECTORY+"/validatePassword")
     })
 
 app.listen(process.env.PORT || 3000, function() {
-  console.log("GCodes is Live on " + (SERVER? "Remote" : "Local") + " Server :: port: - " + process.env.PORT);
+  console.error("SmartStop is Live on " + (SERVER? "Remote" : "Local") + " Server :: port: - " + process.env.PORT);
 })
 
 
