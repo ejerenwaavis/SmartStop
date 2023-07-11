@@ -1,4 +1,8 @@
-require("dotenv").config();
+const SERVER = !(process.execPath.includes("C:"));//process.env.PORT;
+if (!SERVER){
+  require("dotenv").config();
+}
+
 const APIKEY = process.env.APIKEY;
 const ADMINPASS = process.env.ADMINPASS;
 const ADMINCONSOLE = process.env.ADMINCONSOLE;
@@ -29,8 +33,6 @@ const passportLocalMongoose = require("passport-local-mongoose");
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 
-
-
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({
   extended: true
@@ -40,17 +42,17 @@ app.use(express.static("public"));
 // app.use( express.static('public'));
 
 //Forcing https so as to allow frontend geolocation work properly
-/* app.use (function (req, res, next) {
-//     // console.log(req.headers.host);
-//         if (req.secure) {
-//                 // request was via https, so do no special handling
-//                 res.redirect('https://' + req.headers.host + req.url);
-//         } else {
-//                 // request was via http, so redirect to https
-//                 res.redirect('https://' + req.headers.host + req.url);
-//         }
-// });
-*/
+ app.use (function (req, res, next) {
+    // console.log(req.headers.host);
+        if (req.secure) {
+                // request was via https, so do no special handling
+                res.redirect('https://' + req.headers.host + req.url);
+        } else {
+                // request was via http, so redirect to https
+                res.redirect('https://' + req.headers.host + req.url);
+        }
+});
+
 
 /******************** Authentication Setup & Config *************/
 //Authentication & Session Management Config
