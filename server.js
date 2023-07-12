@@ -13,7 +13,7 @@ const PASSWORD = process.env.PASSWORD;
 const SECRETE = process.env.SECRETE;
 
 /*********Handling Server / Local Enviromnemnt sensitive variables************/
-const APP_DIRECTORY = process.env.APP_DIRECTORY;
+const APP_DIRECTORY = !(SERVER) ? "" : ((process.env.APP_DIRECTORY) ? (process.env.APP_DIRECTORY) : "");
 const PUBLIC_FOLDER = (SERVER) ? "./" : "../";
 
 const express = require("express");
@@ -511,7 +511,7 @@ app.route(APP_DIRECTORY+"/validatePassword")
     })
 
 app.listen(process.env.PORT || 3000, function() {
-  console.error("SmartStop is Live on " + (SERVER? "Remote" : "Local") + " Server :: port: - " + process.env.PORT);
+  console.error("SmartStop is live on port " + ((process.env.PORT) ? process.env.PORT : 3000));
 })
 
 
