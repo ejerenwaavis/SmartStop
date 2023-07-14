@@ -41,9 +41,9 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 app.use(express.static("public"));
-app.use(express.static(APP_DIRECTORY+"/public"));
-app.use(express.static("."));
-app.use(express.json()); 
+// app.use(express.static(APP_DIRECTORY+"/public"));
+// app.use(express.static("."));
+// app.use(express.json()); 
 
 
 
