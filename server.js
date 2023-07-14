@@ -12,7 +12,6 @@ const PASSWORD = process.env.PASSWORD;
 const SECRETE = process.env.SECRETE;
 
 /*********Handling Server / Local Enviromnemnt sensitive variables************/
-const SERVER = !(process.execPath.includes("C:")); //process.env.PORT;
 const APP_DIRECTORY = process.env.APP_DIRECTORY;
 const PUBLIC_FOLDER = (SERVER) ? "./" : "../";
 
