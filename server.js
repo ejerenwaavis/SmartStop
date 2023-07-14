@@ -40,17 +40,6 @@ app.use(express.static("public"));
 // app.use(express.static(APP_DIRECTORY+"/public"));
 // app.use( express.static('public'));
 
-//Forcing https so as to allow frontend geolocation work properly
- app.use (function (req, res, next) {
-    // console.log(req.headers.host);
-        if (req.secure) {
-                // request was via https, so do no special handling
-                res.redirect('https://' + req.headers.host + req.url);
-        } else {
-                // request was via http, so redirect to https
-                res.redirect('https://' + req.headers.host + req.url);
-        }
-});
 
 
 /******************** Authentication Setup & Config *************/
