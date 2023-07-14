@@ -33,13 +33,18 @@ const passportLocalMongoose = require("passport-local-mongoose");
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 
+// app.use( express.static('public'));
+
+// Configure app to user EJS abd bodyParser
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({
   extended: true
 }));
 app.use(express.static("public"));
-// app.use(express.static(APP_DIRECTORY+"/public"));
-// app.use( express.static('public'));
+app.use(express.static(APP_DIRECTORY+"/public"));
+app.use(express.static("."));
+app.use(express.json());
+
 
 
 /******************** Authentication Setup & Config *************/
