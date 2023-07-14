@@ -37,7 +37,7 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 app.use(express.static("public"));
-// app.use(express.static(APP_DIRECTORY+"/public"));
+app.use(express.static(APP_DIRECTORY+"/public"));
 // app.use( express.static('public'));
 
 
