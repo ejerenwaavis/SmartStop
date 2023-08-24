@@ -139,7 +139,7 @@ passport.use(new GoogleStrategy({
     }, function(err, user) {
       if (!err) {
         console.error("userFound---->:");
-        console.error(user._id);
+        console.error(user);
         if (user) {
             if (user.verified) {
               return cb(null, user)
