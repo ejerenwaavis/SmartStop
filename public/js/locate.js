@@ -2,14 +2,6 @@
 const domain = $('#domain').attr('domain');
 // console.log(domain);
 
-$("document").ready(function(){
-  $("#accessForm").on("submit", function(e){
-     e.preventDefault();
-      includeCommunity();
-  });
-  getGecode.then(success).catch(error);
-
-});
 
 let x = 0;
 let y = 0;
@@ -95,3 +87,13 @@ function focusOnAdminPass(){
   });
 }
 
+
+
+$("document").ready(function(){
+  $("#accessForm").on("submit", function(e){
+     e.preventDefault();
+      includeCommunity();
+  });
+  getGecode.then(success).catch(error);
+
+});
