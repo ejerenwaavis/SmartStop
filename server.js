@@ -130,7 +130,7 @@ passport.use(new GoogleStrategy({
   },
   function(accessToken, refreshToken, profile, cb) {
     let userProfile = profile._json;
-    console.error(userProfile);
+    // console.error(userProfile);
     // console.error("Logged In as: " + userProfile.email + "\n" + userProfile.family_name +"\n" +userProfile.given_name+
     // "\n" +userProfile.name+ "\n" + userProfile.picture);
     // console.error("\n");
@@ -138,20 +138,67 @@ passport.use(new GoogleStrategy({
       _id: userProfile.sub
     }, function(err, user) {
       if (!err) {
+        let oldUser = user;
+        let newUser={};
         // console.error("userFound---->:");
         // console.error(user);
+        // console.error("----->:\n");
+        
         if (user) {
+          if((!user.username) && userProfile.name){
+            // console.error("user has no USERNAME on file");
+            newUser.username = userProfile.name;
+          }
+          if((!user.lastName) && userProfile.family_name){
+            // console.error("user has no LAST NAME on file");
+            newUser.lastName = userProfile.family_name;
+          }
+
+          if((!user.firstName) && userProfile.given_name){
+            // console.error("user has no FIRST NAME on file");
+            newUser.firstName = userProfile.given_name;
+          }
+
+          if((!user.photoURL) && userProfile.picture){
+            // console.error("user has no PHOTO on file");
+            newUser.photoURL = userProfile.picture;
+          }
+
+          if(!user.email && userProfile.email){
+            // console.error("user has no EMAIL on file");
+            newUser.email = userProfile.email;
+          }
+
+          // console.error(user);
+          // console.error(newUser);
+
+          if(oldUser === newUser){
+            console.error("OldUser is equals NewUser no need for update");
             if (user.verified) {
               return cb(null, user)
             } else {
               console.error("Logged in but Still Unauthorized");
               return cb(err);
             }
+          }else{
+            
+              User.findOneAndUpdate({_id:user._id}, newUser, {new:true, upsert:true})
+              .then(function(result) {
+                // console.error(result);
+                console.error("User Updates ran Successfully");
+                return cb(null, user);
+              })
+              .catch(function(err) {
+                console.error("failed to create user");
+                console.error(err);
+            });
+          }
         } else {
           console.error("user not found - creating new user");
           let newUser = new User({
-            username: userProfile.email,
             _id: userProfile.sub,
+            email: userProfile.email,
+            username: userProfile.name,
             firstName: userProfile.given_name,
             lastName: userProfile.family_name,
             verified: false,
