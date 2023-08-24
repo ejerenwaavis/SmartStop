@@ -179,8 +179,8 @@ app.route(APP_DIRECTORY+"/")
     // if (req.isAuthenticated() || req.headers.host === "localhost:3000") {
       if (req.isAuthenticated() ) {
         // console.error("Authorised Request");
-      console.error("\n/");
-      console.error(req.user);
+      // console.error("\n/");
+      //console.error(req.user);
       res.render("home", {
         body: new Body("SmartStop", "", "", APP_DIRECTORY),
         user: req.user
@@ -195,8 +195,8 @@ app.route(APP_DIRECTORY+"/login")
 
 .get(function(req, res) {
 
-    console.error("\nfrom logIn");
-    console.error(req.user);
+    // console.error("\nfrom logIn");
+    //console.error(req.user);
     res.render("login", {
       body: new Body("Login", "", "", APP_DIRECTORY),
       user: null
@@ -219,8 +219,8 @@ app.route(APP_DIRECTORY+"/loggedIn")
       // Successful authentication, redirect user page.
       // console.error("Logged IN");
       // res.redirect(APP_DIRECTORY+"/");
-      console.error("\nfrom Logged In");
-      console.error(req.user);
+      // console.error("\nfrom Logged In");
+      //console.error(req.user);
       res.render('home', {
         body: new Body("SmartStop", "", "SmartStop Authentication Successful", APP_DIRECTORY),
         user: req.user,
