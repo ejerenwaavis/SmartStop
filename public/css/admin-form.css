@@ -9,7 +9,11 @@ footer{
 }
 
 body{
+ font-size: 1rem;
+}
 
+.gate-code-font{
+  font-size: 4rem;
 }
 
 .search-icon{

@@ -32,8 +32,8 @@ function showCode(element) {
     var searchedInfoHtml = "";
     for (gateCode of community.gateCodes) {
         var prefix = (gateCode.code.toString().length == 4 && gateCode.code.toString() !== "0000") ? "#" : "";
-        searchedInfoHtml += '<p class="mb-0 mt-3"> ' + gateCode.description + ' </p> <p class=" display-2 fw-bolder mt-0 mb-0" id="label">' +
-          ''+ prefix +''+   gateCode.code + '</p>';
+        searchedInfoHtml += '<p class="mb-0 mt-3"> ' + gateCode.description + ' </p> <h1 class="gate-code-font fw-bolder  mt-0 mb-0" id="label">' +
+          ''+ prefix +''+   gateCode.code + '</h1>';
     }
 
     var defaultInfo = '<p class="mt-4 mb-0"> <em><b> '+  community.communityName + ' </b> Community</em></p>'+
