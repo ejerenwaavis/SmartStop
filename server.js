@@ -130,16 +130,18 @@ passport.use(new GoogleStrategy({
   },
   function(accessToken, refreshToken, profile, cb) {
     let userProfile = profile._json;
+    // console.error(profile);
+    // console.error("Logged In as: " + userProfile.email + "\n" + userProfile.family_name +"\n" +userProfile.given_name+
+    // "\n" +userProfile.name+ "\n" + userProfile.picture);
+    // console.error("\n");
         User.findOne({
       _id: userProfile.email
     }, function(err, user) {
-      // console.error(err);
       if (!err) {
         console.error("userFOund---->:");
         console.error(user);
         if (user) {
             if (user.verified) {
-              console.error("Logged In as: " + userProfile.name);
               return cb(null, user)
             } else {
               console.error("Logged in but Still Unauthorized");
@@ -148,10 +150,13 @@ passport.use(new GoogleStrategy({
         } else {
           console.error("user not found - creating new user");
           let newUser = new User({
-            username: userProfile.name,
-            _id: userProfile.sub,
+            username: userProfile.email,
+            _id: userProfile.email,
+            firstName: userProfile.given_name,
+            lastName: userProfile.family_name,
             verified: false,
-            isProUser: false
+            isProUser: false,
+            photoURL: userProfile.picture
           })
           newUser.save()
             .then(function() {
@@ -205,6 +210,9 @@ app.route(APP_DIRECTORY+"/login")
 
 app.get(APP_DIRECTORY+'/auth/google', passport.authenticate('google', {
     scope: [
+    'profile',
+    'email',
+    'openid',
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/userinfo.email'
   ]
@@ -469,20 +477,20 @@ app.route(APP_DIRECTORY+"/adminConsole")
             if (foundUsers) {
               res.render("adminConsole", {
                 body: new Body("Admin Console", "", "", APP_DIRECTORY),
-        user: req.user,
+                user: req.user,
                 users: foundUsers
               });
             } else {
               res.render("adminConsole", {
                 body: new Body("Admin Console", "No Users Found", "", APP_DIRECTORY),
-        user: req.user,
+                user: req.user,
                 users: undefined
               });
             }
           } else {
             res.render("adminConsole", {
               body: new Body("Admin Console", "Unable to Search the database", "", APP_DIRECTORY),
-        user: req.user,
+              user: req.user,
               users: undefined
             });
           }
