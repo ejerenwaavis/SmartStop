@@ -130,7 +130,7 @@ passport.use(new GoogleStrategy({
   },
   function(accessToken, refreshToken, profile, cb) {
     let userProfile = profile._json;
-    // console.error(profile);
+    console.error(userProfile);
     // console.error("Logged In as: " + userProfile.email + "\n" + userProfile.family_name +"\n" +userProfile.given_name+
     // "\n" +userProfile.name+ "\n" + userProfile.picture);
     // console.error("\n");
