@@ -133,7 +133,7 @@ passport.use(new GoogleStrategy({
         User.findOne({
       _id: userProfile.email
     }, function(err, user) {
-      console.error(err);
+      // console.error(err);
       if (!err) {
         console.error("userFOund---->:");
         console.error(user);
@@ -176,10 +176,11 @@ passport.use(new GoogleStrategy({
 /**************************** Route aHandling ********************************/
 app.route(APP_DIRECTORY+"/")
   .get(function(req, res) {
-    
     // if (req.isAuthenticated() || req.headers.host === "localhost:3000") {
-    if (req.isAuthenticated() ) {
-      console.error("Authorised Request");
+      if (req.isAuthenticated() ) {
+        // console.error("Authorised Request");
+      console.error("\n/");
+      console.error(req.user);
       res.render("home", {
         body: new Body("SmartStop", "", "", APP_DIRECTORY),
         user: req.user
@@ -191,10 +192,14 @@ app.route(APP_DIRECTORY+"/")
   })
 
 app.route(APP_DIRECTORY+"/login")
-  .get(function(req, res) {
+
+.get(function(req, res) {
+
+    console.error("\nfrom logIn");
+    console.error(req.user);
     res.render("login", {
       body: new Body("Login", "", "", APP_DIRECTORY),
-        user: null
+      user: null
     });
   })
 
@@ -213,8 +218,9 @@ app.route(APP_DIRECTORY+"/loggedIn")
     function(req, res) {
       // Successful authentication, redirect user page.
       // console.error("Logged IN");
-      // console.error(user);
       // res.redirect(APP_DIRECTORY+"/");
+      console.error("\nfrom Logged In");
+      console.error(req.user);
       res.render('home', {
         body: new Body("SmartStop", "", "SmartStop Authentication Successful", APP_DIRECTORY),
         user: req.user,
@@ -369,7 +375,7 @@ app.route(APP_DIRECTORY+"/adminAdd")
                 gateCodes: savedDoc.gateCodes
               }
               res.render("home", {
-                body: new Body("Admin Add", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt", APP_DIRECTORY),
+                body: new Body("Admin Add", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communitY", APP_DIRECTORY),
                 user: req.user,
                 community: communityResult
               });
