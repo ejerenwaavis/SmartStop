@@ -130,7 +130,7 @@ passport.use(new GoogleStrategy({
   },
   function(accessToken, refreshToken, profile, cb) {
     let userProfile = profile._json;
-    // console.error(userProfile);
+    console.error(userProfile);
     // console.error("Logged In as: " + userProfile.email + "\n" + userProfile.family_name +"\n" +userProfile.given_name+
     // "\n" +userProfile.name+ "\n" + userProfile.picture);
     // console.error("\n");
@@ -141,7 +141,7 @@ passport.use(new GoogleStrategy({
         let oldUser = user;
         let newUser={};
         // console.error("userFound---->:");
-        // console.error(user);
+        console.error(user);
         // console.error("----->:\n");
         
         if (user) {
@@ -195,16 +195,35 @@ passport.use(new GoogleStrategy({
           }
         } else {
           console.error("user not found - creating new user");
-          let newUser = new User({
-            _id: userProfile.sub,
-            email: userProfile.email,
-            username: userProfile.name,
-            firstName: userProfile.given_name,
-            lastName: userProfile.family_name,
-            verified: false,
-            isProUser: false,
-            photoURL: userProfile.picture
-          })
+          let newID; 
+          if(/^\d+$/.test(userProfile.sub)){
+            newID = userProfile.sub;
+          }
+          let newUser;
+          if(newID){
+              newUser = new User({
+              _id: newID,
+              email: userProfile.email,
+              username: userProfile.name,
+              firstName: userProfile.given_name,
+              lastName: userProfile.family_name,
+              verified: false,
+              isProUser: false,
+              photoURL: userProfile.picture
+            });
+          }else{
+              newUser = new User({
+              email: userProfile.newID,
+              username: userProfile.name,
+              firstName: userProfile.given_name,
+              lastName: userProfile.family_name,
+              verified: false,
+              isProUser: false,
+              photoURL: userProfile.picture
+            });
+          }
+
+
           newUser.save()
             .then(function() {
               console.error("User Created Successfully");
