@@ -134,8 +134,7 @@ passport.use(new GoogleStrategy({
     // console.error("Logged In as: " + userProfile.email + "\n" + userProfile.family_name +"\n" +userProfile.given_name+
     // "\n" +userProfile.name+ "\n" + userProfile.picture);
     // console.error("\n");
-        User.findOne({
-      _id: userProfile.sub
+    User.findOne({_id: userProfile.sub 
     }, function(err, user) {
       if (!err) {
         let oldUser = user;
@@ -199,6 +198,7 @@ passport.use(new GoogleStrategy({
           let newUser;
           if(/^\d+$/.test(userProfile.sub)){
             newID = userProfile.sub;
+              console.error("Creating user with a valid _ID");
             newUser = new User({
               _id: userProfile.sub,
               email: userProfile.email,
@@ -210,6 +210,7 @@ passport.use(new GoogleStrategy({
               photoURL: userProfile.picture
               });
             }else{
+              console.error("Creating user w/o _ID");
               newUser = new User({
               email: userProfile.name,
               username: userProfile.given_name + " " + userProfile.family_name,
@@ -269,11 +270,11 @@ app.route(APP_DIRECTORY+"/login")
 
 app.get(APP_DIRECTORY+'/auth/google', passport.authenticate('google', {
     scope: [
-    // 'profile',
-    // 'email',
+    'profile',
+    'email',
     // 'openid',
-    'https://www.googleapis.com/auth/userinfo.profile',
-    'https://www.googleapis.com/auth/userinfo.email'
+    // 'https://www.googleapis.com/auth/userinfo.profile',
+    // 'https://www.googleapis.com/auth/userinfo.email'
   ]
 })
 );
