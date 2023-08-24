@@ -135,11 +135,11 @@ passport.use(new GoogleStrategy({
     // "\n" +userProfile.name+ "\n" + userProfile.picture);
     // console.error("\n");
         User.findOne({
-      _id: userProfile.email
+      _id: userProfile.sub
     }, function(err, user) {
       if (!err) {
-        console.error("userFound---->:");
-        console.error(user);
+        // console.error("userFound---->:");
+        // console.error(user);
         if (user) {
             if (user.verified) {
               return cb(null, user)
@@ -151,7 +151,7 @@ passport.use(new GoogleStrategy({
           console.error("user not found - creating new user");
           let newUser = new User({
             username: userProfile.email,
-            _id: userProfile.email,
+            _id: userProfile.sub,
             firstName: userProfile.given_name,
             lastName: userProfile.family_name,
             verified: false,
