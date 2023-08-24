@@ -42,12 +42,14 @@
 
       <span class="" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown"
         aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+        <%if(user){%>
         <%if(user.photoURL){%>
-        <img class="rounded-circle" src="<%= (user.photoURL)%>" height="30px">
-        <%}else{%>
-          <i class="text-white fs-3 bi bi-person-circle"></i>
+          <img class="rounded-circle" src="<%= (user.photoURL)%>" height="30px">
           <%}%>
-        </span>
+          <%}else{%>
+            <i class="text-white fs-3 bi bi-person-circle"></i>
+            <%}%>
+          </span>
       <div class="collapse navbar-collapse" id="navbarNavDropdown">
         <ul class="navbar-nav ms-auto">
 

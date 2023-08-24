@@ -194,7 +194,7 @@ app.route(APP_DIRECTORY+"/login")
   .get(function(req, res) {
     res.render("login", {
       body: new Body("Login", "", "", APP_DIRECTORY),
-        user: req.user
+        user: null
     });
   })
 
