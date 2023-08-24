@@ -69,9 +69,22 @@ mongoose.connect(uri, {
 mongoose.set("useCreateIndex", true);
 
 const userSchema = new mongoose.Schema({
-  username: String,
   _id: String,
-  verified: { type: Boolean, default: false }
+  username: String,
+  verified: { type: Boolean, default: false },
+  firstName: String,
+  lastName: { type: String, default: "" },
+  password: { type: String, default: "" },
+  photoURL: String,
+  userHasPassword: {
+    type: Boolean,
+    default: false
+  },
+  approvalNotes:[{description:String, adminUsername:String, date:Date}],
+  verified: { type: Boolean, default: false },
+  isProUser: { type: Boolean, default: false },
+  renews: { type: Date, default: new Date() },
+  usageCount: { type: Number, default: 0 },
 });
 // Tell the User Schema to use the passportLocalMongoose plugin
 userSchema.plugin(passportLocalMongoose);
@@ -117,11 +130,10 @@ passport.use(new GoogleStrategy({
   },
   function(accessToken, refreshToken, profile, cb) {
     let userProfile = profile._json;
-
-    User.findOne({
-      _id: userProfile.sub
+        User.findOne({
+      _id: userProfile.email
     }, function(err, user) {
-      console.log(err);
+      console.error(err);
       if (!err) {
         console.log("userFOund---->:");
         console.log(user);
@@ -138,7 +150,8 @@ passport.use(new GoogleStrategy({
           let newUser = new User({
             username: userProfile.name,
             _id: userProfile.sub,
-            verified: false
+            verified: false,
+            isProUser: false
           })
           newUser.save()
             .then(function() {
@@ -168,7 +181,8 @@ app.route(APP_DIRECTORY+"/")
     if (req.isAuthenticated() ) {
       console.log("Authorised Request");
       res.render("home", {
-        body: new Body("SmartStop", "", "", APP_DIRECTORY)
+        body: new Body("SmartStop", "", "", APP_DIRECTORY),
+        user: req.user
       });
     } else {
       console.log("UN-authenticated Request");
@@ -179,12 +193,16 @@ app.route(APP_DIRECTORY+"/")
 app.route(APP_DIRECTORY+"/login")
   .get(function(req, res) {
     res.render("login", {
-      body: new Body("Login", "", "", APP_DIRECTORY)
+      body: new Body("Login", "", "", APP_DIRECTORY),
+        user: req.user
     });
   })
 
 app.get(APP_DIRECTORY+'/auth/google', passport.authenticate('google', {
-  scope: ['profile']
+    scope: [
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/userinfo.email'
+  ]
 })
 );
 
@@ -198,7 +216,8 @@ app.route(APP_DIRECTORY+"/loggedIn")
       // console.log(user);
       // res.redirect(APP_DIRECTORY+"/");
       res.render('home', {
-        body: new Body("SmartStop", "", "SmartStop Authentication Successful", APP_DIRECTORY)
+        body: new Body("SmartStop", "", "SmartStop Authentication Successful", APP_DIRECTORY),
+        user: req.user,
       });
     })
 
@@ -236,6 +255,7 @@ app.route(APP_DIRECTORY+"/locate")
               // res.send(foundObj);
               res.render("code", {
                 body: new Body("SmartStop", "", "", APP_DIRECTORY),
+                user: req.user,
                 community: communityResult,
                 location: location
               })
@@ -249,6 +269,7 @@ app.route(APP_DIRECTORY+"/locate")
               // res.send(communityResult);
               res.render("code", {
                 body: new Body("SmartStop", "Unregistered Community", "", APP_DIRECTORY),
+                user: req.user,
                 community: communityResult,
                 location: location
               });
@@ -349,11 +370,13 @@ app.route(APP_DIRECTORY+"/adminAdd")
               }
               res.render("home", {
                 body: new Body("Admin Add", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt", APP_DIRECTORY),
+                user: req.user,
                 community: communityResult
               });
             } else {
               res.render("code", {
                 body: new Body("Admin Add", "Error: Failed to save the gate codes --> " + err, "", APP_DIRECTORY),
+                user: req.user,
                 location: community
               })
             }
@@ -367,6 +390,7 @@ app.route(APP_DIRECTORY+"/adminAdd")
               if(!err){
                 res.render("adminAdd", {
                   body: new Body("Admin", "", "Community '" + community.communityName + "', was updated successfully", APP_DIRECTORY),
+                  user: req.user,
                   location: null
                 });
               }else{
@@ -375,6 +399,7 @@ app.route(APP_DIRECTORY+"/adminAdd")
                 // console.log(exists);
                 res.render("adminAdd", {
                   body: new Body("SmartStop|Admin", "Error: "+err.message, "", APP_DIRECTORY),
+                  user: req.user,
                   location: community
                 });
               }
@@ -387,6 +412,7 @@ app.route(APP_DIRECTORY+"/adminAdd")
       console.log("No Admin Password");
       res.render("adminAdd", {
         body: new Body("Admin Add", "Error: Invalid Passord", APP_DIRECTORY),
+        user: req.user,
         location: community
       });
     }
@@ -410,6 +436,7 @@ app.route(APP_DIRECTORY+"/adminInclude")
     // res.redirect(APP_DIRECTORY+"/") original code
     res.render("adminAdd", {
       body: new Body("SmartStop|Admin", "", "", APP_DIRECTORY),
+      user: req.user,
       location: null
     })
   })
@@ -418,6 +445,7 @@ app.route(APP_DIRECTORY+"/adminInclude")
     // console.log(location);
     res.render("adminAdd", {
       body: new Body("SmartStop|Admin", "", "", APP_DIRECTORY),
+      user: req.user,
       location: location
     })
   })
@@ -427,26 +455,40 @@ app.route(APP_DIRECTORY+"/adminInclude")
 
 app.route(APP_DIRECTORY+"/adminConsole")
   .get(function(req, res) {
-    User.find({}, function(err, foundUsers) {
-      if (!err) {
-        if (foundUsers) {
-          res.render("adminConsole", {
-            body: new Body("Admin Console", "", "", APP_DIRECTORY),
-            users: foundUsers
-          });
-        } else {
-          res.render("adminConsole", {
-            body: new Body("Admin Console", "No Users Found", "", APP_DIRECTORY),
-            users: undefined
-          });
-        }
-      } else {
-        res.render("adminConsole", {
-          body: new Body("Admin Console", "Unable to Search the database", "", APP_DIRECTORY),
-          users: undefined
-        });
+    if (req.isAuthenticated() ) {
+      // if(req.user?(req.user.isProUser):false || req.headers.host === "localhost:3000"){
+      if(req.user.isProUser){
+        User.find({}, function(err, foundUsers) {
+          if (!err) {
+            if (foundUsers) {
+              res.render("adminConsole", {
+                body: new Body("Admin Console", "", "", APP_DIRECTORY),
+        user: req.user,
+                users: foundUsers
+              });
+            } else {
+              res.render("adminConsole", {
+                body: new Body("Admin Console", "No Users Found", "", APP_DIRECTORY),
+        user: req.user,
+                users: undefined
+              });
+            }
+          } else {
+            res.render("adminConsole", {
+              body: new Body("Admin Console", "Unable to Search the database", "", APP_DIRECTORY),
+        user: req.user,
+              users: undefined
+            });
+          }
+       });
+      }else{
+        console.error("Require Priviledge Requirments Not Met");
+        res.redirect(APP_DIRECTORY+"/");
       }
-    });
+    }else{
+      console.error("UN-authenticated Request");
+      res.redirect(APP_DIRECTORY+"/login");
+    } 
   })
 
 app.route(APP_DIRECTORY+"/verifyUser")
@@ -463,19 +505,65 @@ app.route(APP_DIRECTORY+"/verifyUser")
     })
   })
 
-  app.route(APP_DIRECTORY+"/restrictUser")
-    .post(function(req,res){
-      let id = req.body.userID;
-      console.log(id);
-      User.updateOne({_id:id}, { verified: false },function(err,updated){
-        if(updated.n > 0){
-          res.send(true);
-        }else{
-          console.log(err);
-          res.send(false);
-        }
-      })
+app.route(APP_DIRECTORY+"/restrictUser")
+  .post(function(req,res){
+    let id = req.body.userID;
+    // console.log(id);
+    User.updateOne({_id:id}, { verified: false },function(err,updated){
+      if(updated.n > 0){
+        res.send(true);
+      }else{
+        console.log(err);
+        res.send(false);
+      }
     })
+  });
+
+app.route(APP_DIRECTORY+"/makeProUser")
+  .post(function(req,res){
+    // console.log("");
+    let id = req.body.userID;
+    console.log(id);
+    User.updateOne({_id:id}, { isProUser: true },function(err,updated){
+      if(updated.n > 0){
+        res.send(true);
+      }else{
+        console.error(err);
+        res.send(false);
+      }
+    })
+  });
+
+app.route(APP_DIRECTORY+"/revokeProUser")
+  .post(function(req,res){
+    let id = req.body.userID;
+    // console.log(id);
+    User.updateOne({_id:id}, { isProUser: false },function(err,updated){
+      if(updated.n > 0){
+        res.send(true);
+      }else{
+        console.log(err);
+        res.send(false);
+      }
+    })
+  })
+
+  app.route(APP_DIRECTORY+"/deleteUser")
+  .post(function(req,res){
+    let id = req.body.userID;
+    // console.log(id);
+    User.deleteOne({_id:id}, { isProUser: false },function(err,deleted){
+      // console.error(err);
+      // console.error(deleted);
+      if(deleted.deletedCount > 0){
+        res.send(true);
+      }else{
+        console.error(err);
+        res.send(false);
+      }
+    })
+  })
+
 
 app.route(APP_DIRECTORY+"/validatePassword")
   .get(function(req, res) {
@@ -490,19 +578,19 @@ app.route(APP_DIRECTORY+"/validatePassword")
     }
   })
 
-  app.route(APP_DIRECTORY+"/validateConsolePassword")
-    .get(function(req, res) {
+app.route(APP_DIRECTORY+"/validateConsolePassword")
+  .get(function(req, res) {
+    res.send(false);
+  })
+  .post(function(req, res) {
+    pass = req.body.password;
+    // console.log(pass);
+    if (pass === ADMINCONSOLE) {
+      res.send(true);
+    } else {
       res.send(false);
-    })
-    .post(function(req, res) {
-      pass = req.body.password;
-      // console.log(pass);
-      if (pass === ADMINCONSOLE) {
-        res.send(true);
-      } else {
-        res.send(false);
-      }
-    })
+    }
+  })
 
 app.listen(process.env.PORT || 3000, function() {
   console.error("SmartStop is live on port " + ((process.env.PORT) ? process.env.PORT : 3000));

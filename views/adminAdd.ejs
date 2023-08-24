@@ -1,31 +1,27 @@
 <%- include('partials/header'); %>
 
 <h3 class="display-5 mt-5 mb-5">Admin Add</h3>
-<p id="error-message" class="text-danger display-5 mt-5 mb-5"><%=body.error%></p>
+<p id="error-message" class="text-danger mt-5 mb-5"><%=body.error%></p>
 
 <form require action="<%= body.domain %>/adminAdd" method="POST" id="add-community-form" autocomplete="on">
   <div class="col-lg-6 offset-lg-3">
     <input type="text" autofocus name="communityName" value='<%= location? location.communityName : "" %>' class="mb-2 form-control" id="communityName" placeholder="Community Name">
 
-    <div class="row gate-code-container">
-      <div class="input-group mb-2 col-6">
-        <input type="text" class="form-control gate-code-description" placeholder="Gate Code Description" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
-      </div>
-      <div class="input-group mb-2 col-6">
-        <input required type="text" class="form-control gate-code" placeholder="Gate Code #" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
-        <div class="input-group-append">
-          <button class="btn btn-outline-warning" type="button" onclick="addGateCodeField()" id="button-addon1"><i class="fas fa-plus"></i></button>
-        </div>
-      </div>
+    
+
+    <div class="input-group mb-2">
+      <input type="text" class="form-control gate-code-description" placeholder="Gate Code Description" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
+      <input required type="alph-numeric" class="form-control gate-code" placeholder="Gate Code #" value=""
+        aria-label="" aria-describedby="button-addon1">
+      <button class="btn btn-outline-warning" type="button" onclick="addGateCodeField()" id="button-addon1"><i class="fas fa-plus"></i></button>
+
     </div>
 
-    <div class="street-address-container">
-      <div class="input-group mb-2">
-        <input required type="text" value="<%= location? location.street : '' %>" autocomplete="on" class="mb-2 form-control street-address" id="autocomplete-address" placeholder="(Type only the Street names)">
 
-        <div class="input-group-append mb-2">
-          <button class="btn btn-outline-warning"  onclick="addAddressField()" type="button" id="addAddress"><i class="fas fa-plus"></i></button>
-        </div>
+    <div class="street-address-container mb-2">
+      <div class="input-group">
+        <input required type="text" value="<%= location? location.street : '' %>" autocomplete="on" class="form-control street-address" id="autocomplete-address" placeholder="(Type only the Street names)">
+        <button class="btn btn-outline-warning"  onclick="addAddressField()" type="button" id="addAddress"><i class="fas fa-plus"></i></button>
       </div>
     </div>
 
@@ -42,14 +38,14 @@
     
   </div>
 
-  <div class="container mt-2">
+  <div class="mt-2">
     <div class="input-group mb-2">
       <input required type="password" value="" autocomplete="on"
         class="mb-2 form-control " id="password" name="password" placeholder="Admin Password">
     </div>
   </div>
-  <div class="col-lg-6 offset-lg-3 mt-2">
-    <button type="button" onclick="sendForm()" class="btn btn-primary btn-block">Add</button>
+  <div class="d-grid gap-2 mt-2">
+    <button type="button" onclick="sendForm()" class="btn btn-primary ">Add</button>
     <!-- <button type="button" onclick="addNewStreet()" class="btn btn-primary btn-block">Add</button> -->
   </div>
 

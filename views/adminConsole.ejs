@@ -3,26 +3,97 @@
 <h3 class="display-5 mt-5 mb-5">Admin Console</h3>
 <p id="error-message" class="text-danger display-5 mt-5 mb-5"><%=body.error%></p>
 <p id="message" class="text-success display-5 mt-5 mb-5"><%=body.message%></p>
-<div class="container">
-  <ul class="list-group">
-      <%for(user of users){%>
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <%=user.username%>
-          <%if(user.verified){%>
-            <span id="<%=user._id%>" onclick="restrictUser(this)" class="verify-btn btn btn-outline-success ">
-              Verified
-              <i id="<%=user._id%>" class="fas fa-user-check"></i>
-            </span>
 
-          <%}else{%>
-            <span id="<%=user._id%>" onclick="verifyUser(this)" class="verify-btn btn btn-outline-danger ">
-              Unverified
-              <i id="<%=user._id%>" class="fas fa-user-times"></i>
-            </span>
-          <%}%>
-        </li>
-      <%}%>
+<div class="container-fluid">
+  <ul class="nav nav-tabs justify-content-center mb-3" id="myTab" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active btn text-reset" id="verified-tab" data-bs-toggle="tab" data-bs-target="#verified-tab-pane" 
+        role="tab" aria-controls="home-tab-pane" aria-selected="true">Verified</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link btn text-reset" id="unverified-tab" data-bs-toggle="tab" data-bs-target="#unverified-tab-pane" 
+        role="tab" aria-controls="unverified-tab-pane" aria-selected="false">Unverified</button>
+    </li>
+    
   </ul>
+  <div class="tab-content" id="myTabContent">
+      <div class="tab-pane fade show active" id="verified-tab-pane" role="tabpanel" aria-labelledby="verfied-tab" tabindex="0">
+        <ul class="list-group">
+          <%for(user of users){%>
+            <%if(user.verified){%>
+              <li id="user-<%=user._id%>" class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+
+                  <%if(user.isProUser){%>
+                    <i id="pro-<%=user._id%>" class="bi bi-star-fill text-warning" style="font-size: 0.8rem;"></i>
+                    <%}else{%>
+                    <i id="pro-<%=user._id%>" class="d-none bi bi-star-fill text-warning" style="font-size: 0.8rem;"></i>  
+                    <%}%>
+                    <!-- <%if((/^-?\d+$/.test(user._id))){%> -->
+                        <!-- <i class="bi bi-shield-x"></i> -->
+                      <!-- <%}%> -->
+                      <%if(user.lastName && user.firstName){%>
+                        <%= user.firstName %> <%= user.lastName %>
+                      <%}else{%>
+                        <%= user.username %>
+                      <%}%>
+                      
+                  </div>
+                  <div class="btn-group" role="group" aria-label="Button group with nested dropdown">
+                    <span id="<%=user._id%>" onclick="restrictUser(this)" class="verify-btn btn btn-outline-success ">
+                      Verified
+                      <i id="<%=user._id%>" class="fas fa-user-check"></i>
+                    </span>
+                    <div class="btn-group" role="group">
+                      <button  class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                          <!-- <i class="bi bi-three-dots-vertical"></i> -->
+                      </button>
+                      <ul class="dropdown-menu">
+                        <%if(user.isProUser){%>
+                        <li><span id="proUserMaker-<%=user._id%>" data-id="<%=user._id%>" class="dropdown-item btn"  onclick="revokeProUser(this)" >Revoke ProUser</span></li>
+                        <%}else{%>
+                        <li><span id="proUserMaker-<%=user._id%>" data-id="<%=user._id%>" class="dropdown-item btn" onclick="makeProUser(this)" >Make ProUser</span></li>
+                          <%}%>
+                        
+                        <li><span id="delete-<%=user._id%>" data-id="<%=user._id%>" class="dropdown-item btn" onclick="deleteUser(this)" >Delete User</span></li>
+                      </ul>
+                    </div>
+                  </div>
+                <!-- <span id="<%=user._id%>" onclick="restrictUser(this)" class="verify-btn btn btn-outline-success ">
+                    Verified
+                    <i id="<%=user._id%>" class="fas fa-user-check"></i>
+                  </span> -->
+               </li>
+            <%}%>
+          <%}%>
+        </ul>
+      </div>
+      <div class="tab-pane fade" id="unverified-tab-pane" role="tabpanel" aria-labelledby="unverfied-tab" tabindex="0">
+        <ul class="list-group">
+          <%for(user of users){%>
+            <%if(!user.verified){%>
+              <li id="user-<%=user._id%>" class="list-group-item d-flex justify-content-between align-items-center">
+                <%if(user.lastName && user.firstName){%>
+                  <%= user.firstName %>
+                  <%= user.lastName %>
+                <%}else{%>
+                  <%= user.username %>
+                <%}%>
+                <div class="btn-group" role="group" aria-label="Button group with nested dropdown">
+                  <span id="<%=user._id%>" onclick="verifyUser(this)" class="verify-btn btn btn-outline-danger ">
+                    Unverified
+                    <i id="<%=user._id%>" class="bi bi-incognito"></i>
+                  </span>
+                  <button class="btn btn-outline-danger" data-id="<%=user._id%>" onclick="deleteUser(this)">
+                    <i class="bi bi-trash3-fill"></i>
+                  </button>
+                </div>
+              </li>
+              <%}%>
+                <%}%>
+        </ul>
+      </div>
+  </div>
 </div>
 
 <a href="#" onclick="reload()" class="btn btn-outline-danger mt-5">

@@ -5,27 +5,18 @@
 
 
 
-  <div class="dropdown mt-5">
-    <div class="" id="searchBarContainer" data-toggle="dropdown" aria-haspopup="false" aria-expanded="false">
-      <div class="input-group col-12 align-self-center">
-        <input autocomplete="off" type="text" onkeyup="find(this)" class="search-field form-control" id="search-field"
-          placeholder="Search Community or Street" aria-label="Street Name" aria-describedby="button-addon2">
-        <button onclick="search()" class="btn search-icon btn-outline-secondary" type="button" id="button-addon2"><i
-            class="fas fa-search"></i></button>
-      </div>
-    </div>
 
-    <div class="container">
-      <div class="row ">
-        <div class="dropdown-menu col-12 py-2 px-1 "   id="resultList" aria-labelledby="searchResults">
-          <a class="dropdown-item text-center "> -- <em> Nothing to look for yet -- </em></a>
 
-        </div>
-      </div>
-    </div>
+
+<div class="dropdown mt-5">
+  <input id="search-field" type="text" autocomplete="off" class="form-control dropdown-toggle" 
+  placeholder="Search Community or Street" onkeyup="find(this)" data-bs-toggle="dropdown" aria-expanded="false" />
+  
+  <div id="resultList" class="dropdown-menu col-12 py-2 px-1">
+    <li><span class="dropdown-item text-center "> -- <em> Nothing to look for yet -- </em></span>
+</li>
   </div>
-
-
+</div>
 
   <div id="defaultInfo">
     <div id="communityDescription">
@@ -34,7 +25,7 @@
         <p class="mb-0"> <em><b>
           <%= community.communityName %>
         </b> Community</em></p>
-        <p class="display-5 mb-4 " id="gateCode-description">
+        <p class="fs-6 mb-4 " id="gateCode-description">
           <i>Streets inside: </i>
           <% for(street of community.streets){%>
             <%=street+", " %>
@@ -49,7 +40,7 @@
                 <p class="mb-0 mt-3">
                   <%=gateCode.description%>
                 </p>
-                <h1 class="display-2 font-weight-bold mt-0 mb-0" id="label">
+                <h1 class="display-2 fw-bolder mt-0 mb-0" id="label">
                   <%= (gateCode.code.toString().length==4 && gateCode.code.toString() !=="0000" )? "#" : "" ;%>
                     <%= gateCode.code %>
                 </h1>
