@@ -135,18 +135,18 @@ passport.use(new GoogleStrategy({
     }, function(err, user) {
       console.error(err);
       if (!err) {
-        console.log("userFOund---->:");
-        console.log(user);
+        console.error("userFOund---->:");
+        console.error(user);
         if (user) {
             if (user.verified) {
-              console.log("Logged In as: " + userProfile.name);
+              console.error("Logged In as: " + userProfile.name);
               return cb(null, user)
             } else {
-              console.log("Logged in but Still Unauthorized");
+              console.error("Logged in but Still Unauthorized");
               return cb(err);
             }
         } else {
-          console.log("user not found - creating new user");
+          console.error("user not found - creating new user");
           let newUser = new User({
             username: userProfile.name,
             _id: userProfile.sub,
@@ -155,16 +155,16 @@ passport.use(new GoogleStrategy({
           })
           newUser.save()
             .then(function() {
-              console.log("User Created Successfully");
+              console.error("User Created Successfully");
               return cb(err);
             })
             .catch(function(err) {
-              console.log("failed to create user");
-              console.log(err);
+              console.error("failed to create user");
+              console.error(err);
             });
         }
       } else {
-        console.log("Internal error");
+        console.error("Internal error");
         return cb(new Error(err))
       }
     });
@@ -179,13 +179,13 @@ app.route(APP_DIRECTORY+"/")
     
     // if (req.isAuthenticated() || req.headers.host === "localhost:3000") {
     if (req.isAuthenticated() ) {
-      console.log("Authorised Request");
+      console.error("Authorised Request");
       res.render("home", {
         body: new Body("SmartStop", "", "", APP_DIRECTORY),
         user: req.user
       });
     } else {
-      console.log("UN-authenticated Request");
+      console.error("UN-authenticated Request");
       res.redirect(APP_DIRECTORY+"/login");
     }
   })
@@ -212,8 +212,8 @@ app.route(APP_DIRECTORY+"/loggedIn")
     }),
     function(req, res) {
       // Successful authentication, redirect user page.
-      // console.log("Logged IN");
-      // console.log(user);
+      // console.error("Logged IN");
+      // console.error(user);
       // res.redirect(APP_DIRECTORY+"/");
       res.render('home', {
         body: new Body("SmartStop", "", "SmartStop Authentication Successful", APP_DIRECTORY),
@@ -225,7 +225,7 @@ app.route(APP_DIRECTORY+"/loggedIn")
 app.route(APP_DIRECTORY+"/logout")
   .get(function(req, res) {
     req.logout();
-    console.log("Logged Out");
+    console.error("Logged Out");
     res.redirect(APP_DIRECTORY+"/");
     // res.render("ho", {body:new Body("Login","","Logged out Successfully", APP_DIRECTORY)})
   });
@@ -236,7 +236,7 @@ app.route(APP_DIRECTORY+"/locate")
   })
   .post(function(req, res) {
     const position = req.body.position;
-    // console.log(position);
+    // console.error(position);
     const url = 'https://revgeocode.search.hereapi.com/v1/revgeocode?apiKey=' + APIKEY + '&at=' + position + '&lang=en-US'
     https.get(url, function(response) {
       response.on("data", function(data) {
@@ -289,10 +289,10 @@ app.route(APP_DIRECTORY+"/search/:searchPhrase")
     
     const searchRegex = "^"+searchPhrase+"";
     const re = new RegExp(searchRegex);
-    // console.log(re);
+    // console.error(re);
     Community.find({$or: [{streets: { $regex: re }}, {communityName:{ $regex: re }}] }, function (err, foundObj){
       if (!err) {
-        // console.log(foundObj);
+        // console.error(foundObj);
         if (foundObj) {
           if (foundObj.length > 0){
             res.send(foundObj); 
@@ -345,7 +345,7 @@ app.route(APP_DIRECTORY+"/adminAdd")
   })
   .post(function(req, res) {
 
-    // console.log(req.body.password);
+    // console.error(req.body.password);
     const community = new Community({
       communityName: (req.body.communityName.trim()) ? req.body.communityName.trim() : "-- Missing Name --" ,
       streets: JSON.parse(req.body.streetsJSON), //array of location objects
@@ -355,12 +355,12 @@ app.route(APP_DIRECTORY+"/adminAdd")
     });
 
     if (req.body.password === ADMINPASS){
-      // console.log("Admin Pass Confirmed");
+      // console.error("Admin Pass Confirmed");
       Community.exists({
         communityName: community.communityName
       }, function(err, exists) {
         if (!exists) {
-          // console.log("No duplicates found");
+          // console.error("No duplicates found");
           community.save(function(err, savedDoc) {
             if (!err) {
               const communityResult = {
@@ -382,8 +382,8 @@ app.route(APP_DIRECTORY+"/adminAdd")
             }
           });
         } else {
-          console.log("found duplicate");
-          // console.log(community.streets);
+          console.error("found duplicate");
+          // console.error(community.streets);
           Community.findOneAndUpdate({ communityName: community.communityName }, 
             { $addToSet: { streets: { $each: community.streets }, gateCodes: { $each: community.gateCodes } }, },
             function(err, update){
@@ -394,9 +394,9 @@ app.route(APP_DIRECTORY+"/adminAdd")
                   location: null
                 });
               }else{
-                console.log("Encountered error: ");
-                console.log(err);
-                // console.log(exists);
+                console.error("Encountered error: ");
+                console.error(err);
+                // console.error(exists);
                 res.render("adminAdd", {
                   body: new Body("SmartStop|Admin", "Error: "+err.message, "", APP_DIRECTORY),
                   user: req.user,
@@ -409,7 +409,7 @@ app.route(APP_DIRECTORY+"/adminAdd")
         }
       });
     }else{
-      console.log("No Admin Password");
+      console.error("No Admin Password");
       res.render("adminAdd", {
         body: new Body("Admin Add", "Error: Invalid Passord", APP_DIRECTORY),
         user: req.user,
@@ -420,12 +420,12 @@ app.route(APP_DIRECTORY+"/adminAdd")
 
 app.post(APP_DIRECTORY+"/resourceStreet", function(req, res) {
   const position = req.body.position;
-  // console.log("RESOURCE: " + position);
+  // console.error("RESOURCE: " + position);
   const url = 'https://revgeocode.search.hereapi.com/v1/revgeocode?apiKey=' + APIKEY + '&at=' + position + '&lang=en-US'
   https.get(url, function(response) {
     response.on("data", function(data) {
       const location = JSON.parse(data).items[0].address;
-      // console.log(location.street);
+      // console.error(location.street);
       res.send(location.street);
     });
   });
@@ -442,7 +442,7 @@ app.route(APP_DIRECTORY+"/adminInclude")
   })
   .post(function(req, res) {
     let location = JSON.parse(req.body.locationJSONString);
-    // console.log(location);
+    // console.error(location);
     res.render("adminAdd", {
       body: new Body("SmartStop|Admin", "", "", APP_DIRECTORY),
       user: req.user,
@@ -494,12 +494,12 @@ app.route(APP_DIRECTORY+"/adminConsole")
 app.route(APP_DIRECTORY+"/verifyUser")
   .post(function(req,res){
     let id = req.body.userID;
-    console.log(id);
+    console.error(id);
     User.updateOne({_id:id}, { verified: true },function(err,updated){
       if(updated.n > 0){
         res.send(true);
       }else{
-        console.log(err);
+        console.error(err);
         res.send(false);
       }
     })
@@ -508,12 +508,12 @@ app.route(APP_DIRECTORY+"/verifyUser")
 app.route(APP_DIRECTORY+"/restrictUser")
   .post(function(req,res){
     let id = req.body.userID;
-    // console.log(id);
+    // console.error(id);
     User.updateOne({_id:id}, { verified: false },function(err,updated){
       if(updated.n > 0){
         res.send(true);
       }else{
-        console.log(err);
+        console.error(err);
         res.send(false);
       }
     })
@@ -521,9 +521,9 @@ app.route(APP_DIRECTORY+"/restrictUser")
 
 app.route(APP_DIRECTORY+"/makeProUser")
   .post(function(req,res){
-    // console.log("");
+    // console.error("");
     let id = req.body.userID;
-    console.log(id);
+    console.error(id);
     User.updateOne({_id:id}, { isProUser: true },function(err,updated){
       if(updated.n > 0){
         res.send(true);
@@ -537,12 +537,12 @@ app.route(APP_DIRECTORY+"/makeProUser")
 app.route(APP_DIRECTORY+"/revokeProUser")
   .post(function(req,res){
     let id = req.body.userID;
-    // console.log(id);
+    // console.error(id);
     User.updateOne({_id:id}, { isProUser: false },function(err,updated){
       if(updated.n > 0){
         res.send(true);
       }else{
-        console.log(err);
+        console.error(err);
         res.send(false);
       }
     })
@@ -551,7 +551,7 @@ app.route(APP_DIRECTORY+"/revokeProUser")
   app.route(APP_DIRECTORY+"/deleteUser")
   .post(function(req,res){
     let id = req.body.userID;
-    // console.log(id);
+    // console.error(id);
     User.deleteOne({_id:id}, { isProUser: false },function(err,deleted){
       // console.error(err);
       // console.error(deleted);
@@ -584,7 +584,7 @@ app.route(APP_DIRECTORY+"/validateConsolePassword")
   })
   .post(function(req, res) {
     pass = req.body.password;
-    // console.log(pass);
+    // console.error(pass);
     if (pass === ADMINCONSOLE) {
       res.send(true);
     } else {
