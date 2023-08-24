@@ -7,6 +7,8 @@ $("document").ready(function(){
      e.preventDefault();
       includeCommunity();
   });
+  getGecode.then(success).catch(error);
+
 });
 
 let x = 0;
@@ -93,4 +95,3 @@ function focusOnAdminPass(){
   });
 }
 
-getGecode.then(success).catch(error);
