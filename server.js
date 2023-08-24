@@ -196,13 +196,11 @@ passport.use(new GoogleStrategy({
         } else {
           console.error("user not found - creating new user");
           let newID; 
+          let newUser;
           if(/^\d+$/.test(userProfile.sub)){
             newID = userProfile.sub;
-          }
-          let newUser;
-          if(newID){
-              newUser = new User({
-              _id: newID,
+            newUser = new User({
+              _id: userProfile.sub,
               email: userProfile.email,
               username: userProfile.name,
               firstName: userProfile.given_name,
@@ -210,18 +208,18 @@ passport.use(new GoogleStrategy({
               verified: false,
               isProUser: false,
               photoURL: userProfile.picture
-            });
-          }else{
+              });
+            }else{
               newUser = new User({
-              email: userProfile.newID,
-              username: userProfile.name,
+              email: userProfile.name,
+              username: userProfile.given_name + " " + userProfile.family_name,
               firstName: userProfile.given_name,
               lastName: userProfile.family_name,
               verified: false,
               isProUser: false,
               photoURL: userProfile.picture
-            });
-          }
+              })
+            }
 
 
           newUser.save()
@@ -271,9 +269,9 @@ app.route(APP_DIRECTORY+"/login")
 
 app.get(APP_DIRECTORY+'/auth/google', passport.authenticate('google', {
     scope: [
-    'profile',
-    'email',
-    'openid',
+    // 'profile',
+    // 'email',
+    // 'openid',
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/userinfo.email'
   ]
