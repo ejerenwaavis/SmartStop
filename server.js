@@ -228,10 +228,10 @@ app.route(APP_DIRECTORY+"/loggedIn")
 
 app.route(APP_DIRECTORY+"/logout")
   .get(function(req, res) {
-    req.logout();
-    console.error("Logged Out");
-    res.redirect(APP_DIRECTORY+"/");
-    // res.render("ho", {body:new Body("Login","","Logged out Successfully", APP_DIRECTORY)})
+    req.logout(function(err) {
+      if (err) { return next(err); }
+      res.redirect(APP_DIRECTORY + "/");
+    });
   });
 
 app.route(APP_DIRECTORY+"/locate")
