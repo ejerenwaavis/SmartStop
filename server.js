@@ -80,7 +80,8 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  approvalNotes:[{description:String, adminUsername:String, date:Date}],
+  email: { type: String, default: "" },
+  approvalNotes:[{description:String, adminEmail: { type: String, default: "" }, adminUsername:String, date:Date}],
   verified: { type: Boolean, default: false },
   isProUser: { type: Boolean, default: false },
   renews: { type: Date, default: new Date() },
@@ -130,7 +131,7 @@ passport.use(new GoogleStrategy({
   },
   function(accessToken, refreshToken, profile, cb) {
     let userProfile = profile._json;
-    console.error(userProfile);
+    // console.error(userProfile);
     // console.error("Logged In as: " + userProfile.email + "\n" + userProfile.family_name +"\n" +userProfile.given_name+
     // "\n" +userProfile.name+ "\n" + userProfile.picture);
     // console.error("\n");
@@ -140,7 +141,7 @@ passport.use(new GoogleStrategy({
         let oldUser = user;
         let newUser={};
         // console.error("userFound---->:");
-        console.error(user);
+        // console.error(user);
         // console.error("----->:\n");
         
         if (user) {
@@ -184,7 +185,7 @@ passport.use(new GoogleStrategy({
               User.findOneAndUpdate({_id:user._id}, newUser, {new:true, upsert:true})
               .then(function(result) {
                 // console.error(result);
-                console.error("User Updates ran Successfully");
+                console.error(user.firstName + " - " + (user.email? user.email:user._id)+ " : User Updates ran Successfully");
                 return cb(null, user);
               })
               .catch(function(err) {
@@ -247,12 +248,19 @@ passport.use(new GoogleStrategy({
 app.route(APP_DIRECTORY+"/")
   .get(function(req, res) {
     // if (req.isAuthenticated() || req.headers.host === "localhost:3000") {
-      if (req.isAuthenticated() ) {
-        
-      res.render("home", {
-        body: new Body("SmartStop", "", "", APP_DIRECTORY),
-        user: req.user
-      });
+    if (req.isAuthenticated()){
+      if(req.user.verified){
+        res.render("home", {
+          body: new Body("SmartStop", "", "", APP_DIRECTORY),
+          user: req.user
+        });
+      }else{
+        console.error(new Date().toLocaleString() + " -- UnVerified User Access: " + ((req.user.email)? req.user.email:(req.user.firstName)) );
+        res.render("login", {
+          body: new Body("SmartStop", "Unauthorized Access, please request access from a Team lead.", "", APP_DIRECTORY),
+          user: req.user
+        });
+      }
     } else {
       console.error("UN-authenticated Request");
       res.redirect(APP_DIRECTORY+"/login");
@@ -260,7 +268,6 @@ app.route(APP_DIRECTORY+"/")
   })
 
 app.route(APP_DIRECTORY+"/login")
-
 .get(function(req, res) {
     res.render("login", {
       body: new Body("Login", "", "", APP_DIRECTORY),
@@ -284,10 +291,22 @@ app.route(APP_DIRECTORY+"/loggedIn")
       failureRedirect: APP_DIRECTORY+'/login'
     }),
     function(req, res) {
-      res.render('home', {
-        body: new Body("SmartStop", "", "SmartStop Authentication Successful", APP_DIRECTORY),
-        user: req.user,
-      });
+      if(req.user.verified){
+        res.render("home", {
+          body: new Body("SmartStop", "", "SmartStop Authentication Successful", APP_DIRECTORY),
+          user: req.user
+        });
+      }else{
+        console.error(new Date().toLocaleString() + " -- UnVerified User Access: " + ((req.user.email)? req.user.email:(req.user.firstName)) );
+        res.render("login", {
+          body: new Body("SmartStop", "Unauthorized Access, please request access from a Team lead.", "", APP_DIRECTORY),
+          user: req.user
+        });
+      }
+      // res.render('home', {
+      //   body: new Body("SmartStop", "", "SmartStop Authentication Successful", APP_DIRECTORY),
+      //   user: req.user,
+      // });
     })
 
 
@@ -563,9 +582,10 @@ app.route(APP_DIRECTORY+"/adminConsole")
 app.route(APP_DIRECTORY+"/verifyUser")
   .post(function(req,res){
     let id = req.body.userID;
-    console.error(id);
-    User.updateOne({_id:id}, { verified: true },function(err,updated){
+    // approvalNotes:[{description:String, adminUsername:String, date:Date}]
+    User.updateOne({_id:id}, { verified: true,  $push: { approvalNotes: {description:"Verified", adminUsername:req.user.username, adminEmail:req.user.email, date:new Date()} }},function(err,updated){
       if(updated.n > 0){
+        console.error("user verification Succesful: "+id);
         res.send(true);
       }else{
         console.error(err);
@@ -578,7 +598,7 @@ app.route(APP_DIRECTORY+"/restrictUser")
   .post(function(req,res){
     let id = req.body.userID;
     // console.error(id);
-    User.updateOne({_id:id}, { verified: false },function(err,updated){
+    User.updateOne({_id:id}, { verified: false, $push: { approvalNotes: {description:"Restricted", adminUsername:req.user.username, adminEmail:req.user.email, date:new Date()} }},function(err,updated){
       if(updated.n > 0){
         res.send(true);
       }else{
@@ -593,7 +613,7 @@ app.route(APP_DIRECTORY+"/makeProUser")
     // console.error("");
     let id = req.body.userID;
     console.error(id);
-    User.updateOne({_id:id}, { isProUser: true },function(err,updated){
+    User.updateOne({_id:id}, { isProUser: true,  $push: { approvalNotes: {description:"Upgraded to ProUser", adminUsername:req.user.username, adminEmail:req.user.email, date:new Date()} } },function(err,updated){
       if(updated.n > 0){
         res.send(true);
       }else{
@@ -607,7 +627,7 @@ app.route(APP_DIRECTORY+"/revokeProUser")
   .post(function(req,res){
     let id = req.body.userID;
     // console.error(id);
-    User.updateOne({_id:id}, { isProUser: false },function(err,updated){
+    User.updateOne({_id:id}, { isProUser: false, $push: { approvalNotes: {description:"Revoked ProUser Priviledges", adminUsername:req.user.username, adminEmail:req.user.email, date:new Date()} } },function(err,updated){
       if(updated.n > 0){
         res.send(true);
       }else{
@@ -621,7 +641,7 @@ app.route(APP_DIRECTORY+"/revokeProUser")
   .post(function(req,res){
     let id = req.body.userID;
     // console.error(id);
-    User.deleteOne({_id:id}, { isProUser: false },function(err,deleted){
+    User.deleteOne({_id:id},function(err,deleted){
       // console.error(err);
       // console.error(deleted);
       if(deleted.deletedCount > 0){
@@ -662,7 +682,7 @@ app.route(APP_DIRECTORY+"/validateConsolePassword")
   })
 
 app.listen(process.env.PORT || 3000, function() {
-  console.error("SmartStop is live on port " + ((process.env.PORT) ? process.env.PORT : 3000));
+  console.error(new Date().toLocaleString() + " -- SmartStop is live on port " + ((process.env.PORT) ? process.env.PORT : 3000));
 })
 
 
