@@ -59,28 +59,38 @@ function GateCode(description, code){
 
 function generateEmptyGateCodeField(){
   const codeField = ''+
-  '<div class="input-group mb-2 col-6">'+
-    '<input type="text" autofocus class="form-control gate-code-description" placeholder="Gate Code Description" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">'+
-  '</div>'+
-  '<div class="input-group mb-2 col-6">'+
-    '<input type="text" class="form-control gate-code" placeholder="Gate Code #" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">'+
-    '<div class="input-group-append">'+
-      '<button class="btn btn-outline-warning" type="button" onclick="addGateCodeField()" id="button-addon1"><i class="fas fa-plus"></i></button>'+
-    '</div>'+
-  '</div>'+
-'';
+  // '<div class="input-group mb-2 col-6">'+
+  //   '<input type="text" autofocus class="form-control gate-code-description" placeholder="Gate Code Description" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">'+
+  // '</div>'+
+  // '<div class="input-group mb-2 col-6">'+
+  //   '<input type="text" class="form-control gate-code" placeholder="Gate Code #" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">'+
+  //   '<div class="input-group-append">'+
+  //     '<button class="btn btn-outline-warning" type="button" onclick="addGateCodeField()" id="button-addon1"><i class="fas fa-plus"></i></button>'+
+  //   '</div>'+
+  // '</div>'+
+  '<div class="input-group">'+
+   '<input type="text" class="form-control gate-code-description" placeholder="Gate Code Description" value="" >'+
+  '<input required type="alph-numeric" class="form-control gate-code" placeholder="Gate Code #" value=""'+
+    'aria-label="" aria-describedby="button-addon1">'+
+    '<button class="btn btn-outline-warning" type="button" onclick="addGateCodeField()" id="button-addon1"><i class="fas fa-plus"></i></button>'+
+  '</div>';
   return codeField;
 }
 
 function generateGateCodeField(gateCode){
   const codeField =''+
-  '<div class="input-group mb-2 col-6">'+
-    '<input type="text" class="form-control gate-code-description" placeholder="Gate Code Description" value="'+gateCode.description+'" aria-label="Example text with button addon" aria-describedby="button-addon1">'+
-  '</div>'+
-  '<div class="input-group mb-2 col-6">'+
-    '<input type="text" class="form-control gate-code" placeholder="Gate Code #" value="'+gateCode.code+'" aria-label="Example text with button addon" aria-describedby="button-addon1">'+
-  '</div>'+
-  '';
+  // '<div class="input-group mb-2 col-6">'+
+  //   '<input type="text" class="form-control gate-code-description" placeholder="Gate Code Description" value="'+gateCode.description+'" aria-label="Example text with button addon" aria-describedby="button-addon1">'+
+  // '</div>'+
+  // '<div class="input-group mb-2 col-6">'+
+  //   '<input type="text" class="form-control gate-code" placeholder="Gate Code #" value="'+gateCode.code+'" aria-label="Example text with button addon" aria-describedby="button-addon1">'+
+  // '</div>'+
+  // '';
+  '<div class="input-group mb-2">'+
+  '<input type="text" class="form-control gate-code-description" placeholder="Gate Code Description" value="'+gateCode.description+'" >'+
+  '<input required type="alph-numeric" class="form-control gate-code" placeholder="Gate Code #" value="'+gateCode.code+'"'+
+        'aria-label="" aria-describedby="button-addon1">'+
+  '</div>';
   return codeField;
 }
 
