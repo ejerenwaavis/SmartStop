@@ -25,7 +25,6 @@ function find(element) {
     }
 }
 
-
 function showCode(element) {
     // $("#defaultCode").hide();
     var community = JSON.parse($(element).attr("data"));
@@ -46,3 +45,59 @@ function showCode(element) {
     $("#communityDescription").html(defaultInfo);
 }
 
+async function handletransferForm(evt){
+    let searchPhrase = $("#search-field").val();
+    console.log("search field is: ", searchPhrase);
+
+    if(searchPhrase.length > 0){
+
+        await $.get(domain+"/transferSearch/" + searchPhrase + "", async (communities) => {
+            if (communities) {
+               await communities.sort(function(a, b) {
+                    var nameA = a.communityName.toUpperCase(); // ignore upper and lowercase
+                    var nameB = b.communityName.toUpperCase(); // ignore upper and lowercase
+                    if (nameA < nameB) {
+                        return -1;
+                    }
+                    if (nameA > nameB) {
+                        return 1;
+                    }
+                    // names must be equal
+                    return 0;
+                });
+
+                console.log("found something");
+                console.log(communities);
+                
+                $("#result-display").html("");
+                communities.map(async community => {
+                    let codesHtml = "";
+                    await community.gateCodes.forEach(code => {
+                        codesHtml = codesHtml + code.description + ": " + code.code + " | "
+                    });
+                    let html = '<a href="#" onclick="handlePrintSelection(this)" class="list-group-item list-group-item-action " >'+
+                                '<div class="d-flex w-100 justify-content-between">'+
+                                '<h6 class="mb-1">'+community.communityName+'</h6>'+
+                                '<small>'+community.city+'</small>'+
+                                '</div>'+
+                                '<p class="mb-1">'+ codesHtml +'</p>'+
+                                '<small><i>Streets Inside: '+community.streets.join(', ')+' </i></small>'+
+                                '</a>'
+                    $("#result-display").append(html)
+                });
+            } else {
+                $("#result-display").html("<p class='text-center'>Not Found</p>")
+                console.log("found nothing");
+            }
+            
+        });
+    }else{
+        console.log("Nothing to Search");
+    }
+}
+
+
+
+function handlePrintSelection(evt){
+    $(evt).toggleClass("d-print-none border-start border-2 border-danger opacity-50")
+}

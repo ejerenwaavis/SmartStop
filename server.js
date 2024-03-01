@@ -396,34 +396,35 @@ app.route(APP_DIRECTORY+"/search/:searchPhrase")
         res.send("error: " + err);
       }
     });
+  })
+
+
+
+  app.route(APP_DIRECTORY+"/transferSearch/:searchPhrase")
+  .get(function (req, res) {
+    const searchPhrase = _.startCase(_.toLower(req.params.searchPhrase));
     
-    // Community.find({streets: searchPrase}, function (err, foundObj) {
-    //   if(!err){
-    //     if(foundObj.length > 0){
-    //       res.send(foundObj);
-    //     }else{
-    //       res.send("No Search Results for: " + searchPrase);
-    //     }
-    //   }else{
-    //     res.send("error: " + err);
-    //   }
-    // });
-
-
-    // Article.find({ title_lower: title_lower }, function (err, docs) {
-    //   if (!err) {
-    //     if (docs.length > 0) {
-    //       res.send(docs);
-    //     } else {
-    //       res.send("no such article")
-    //       // res.send(err);
-    //     }
-    //   } else {
-    //     res.send(err);
-    //   }
-    // })
-
-
+    const searchRegex = "^"+searchPhrase+"";
+    const re = new RegExp(searchRegex);
+    // console.error(re);
+    Community.find({$or: [{city: { $regex: re }}] }, function (err, foundObj){
+      if (!err) {
+        // console.error(foundObj);
+        if (foundObj) {
+          if (foundObj.length > 0){
+            res.send(foundObj); 
+          }else{
+            // res.send("Found Nothing: " + searchPhrase);
+            res.send(null);
+          }
+        } else {
+          // res.send("No Search Results for: " + searchPhrase);
+          res.send(null);
+        }
+      } else {
+        res.send("error: " + err);
+      }
+    });
   })
 
 
@@ -578,6 +579,29 @@ app.route(APP_DIRECTORY+"/adminConsole")
       res.redirect(APP_DIRECTORY+"/login");
     } 
   })
+
+
+app.route(APP_DIRECTORY+"/transfer")
+  .get(function(req, res) {
+    if (req.isAuthenticated() ) {
+      // if(req.user?(req.user.isProUser):false || req.headers.host === "localhost:3000"){
+      if(req.user.isProUser){
+              res.render("transfer", {
+                body: new Body("Transfer", "", "", APP_DIRECTORY),
+                user: req.user,
+              });
+      }else{
+        console.error("Require Priviledge Requirments Not Met");
+        res.redirect(APP_DIRECTORY+"/");
+      }
+    }else{
+      console.error("UN-authenticated Request");
+      res.redirect(APP_DIRECTORY+"/login");
+    } 
+  })
+
+
+
 
 app.route(APP_DIRECTORY+"/verifyUser")
   .post(function(req,res){

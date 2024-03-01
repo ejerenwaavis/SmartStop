@@ -1,0 +1,23 @@
+<%- include('partials/header-new'); %>
+
+  
+
+
+
+<div class="btn-group col-10 mt-5">
+    <input id="search-field" type="text" autocomplete="off" class="form-control dropdown-toggle" 
+    placeholder="Search By City Name Only"  />
+      <button onclick="handletransferForm(this)" class="btn btn-primary"> Search </button>
+
+    </div>
+
+  
+  <div  class="col-10 my-3 py-3 mx-auto">
+    
+    <div id="result-display" class="list-group text-start">
+      <p class='text-center'><small><i>Type a city name and Click search to begin</i></small></p>
+    </div>
+
+  </div>
+
+  <%- include('partials/footer'); %>
