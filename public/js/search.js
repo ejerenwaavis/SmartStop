@@ -73,7 +73,7 @@ async function handletransferForm(evt){
                 communities.map(async community => {
                     let codesHtml = "";
                     await community.gateCodes.forEach(code => {
-                        codesHtml = codesHtml + code.description + ": " + code.code + " | "
+                        codesHtml = codesHtml + code.description + ": #" + code.code + " | "
                     });
                     let html = '<a href="#" onclick="handlePrintSelection(this)" class="list-group-item list-group-item-action " >'+
                                 '<div class="d-flex w-100 justify-content-between">'+
