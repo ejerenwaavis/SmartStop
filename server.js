@@ -326,9 +326,14 @@ app.route(APP_DIRECTORY+"/locate")
     const position = req.body.position;
     // console.error(position);
     const url = 'https://revgeocode.search.hereapi.com/v1/revgeocode?apiKey=' + APIKEY + '&at=' + position + '&lang=en-US'
+    var location = {street:""};
     https.get(url, function(response) {
       response.on("data", function(data) {
-        const location = JSON.parse(data).items[0].address;
+        if(data?.items){
+          console.log("Data Sent is: ");
+          console.log(data);
+          location = JSON.parse(data).items[0].address;
+        }
         // Community.find({streets:location.street},function(err, foundObj){
         Community.find({
           streets: location.street
@@ -511,11 +516,18 @@ app.post(APP_DIRECTORY+"/resourceStreet", function(req, res) {
   const position = req.body.position;
   // console.error("RESOURCE: " + position);
   const url = 'https://revgeocode.search.hereapi.com/v1/revgeocode?apiKey=' + APIKEY + '&at=' + position + '&lang=en-US'
+  
   https.get(url, function(response) {
     response.on("data", function(data) {
-      const location = JSON.parse(data).items[0].address;
+      const location = {street:""}
+      if((data)?.items){
+        console.log(data);
+        location = JSON.parse(data).items[0].address;
+        res.send(location.street);
+      }else{
+        res.send(location.street);
+      }
       // console.error(location.street);
-      res.send(location.street);
     });
   });
 });
