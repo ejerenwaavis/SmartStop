@@ -4,10 +4,10 @@
   "description": "Pop Up Codes for LS Delivery Triumph Coruer Team",
   "main": "server.js",
   "dependencies": {
-    "body-parser": "^1.19.0",
+    "body-parser": "^1.20.3",
     "dotenv": "^8.6.0",
     "ejs": "^3.1.5",
-    "express": "^4.17.1",
+    "express": "^4.21.0",
     "express-session": "^1.17.1",
     "lodash": "^4.17.21",
     "mongoose": "^5.13.20",
