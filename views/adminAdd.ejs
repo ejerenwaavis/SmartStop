@@ -1,64 +1,119 @@
-<%- include('partials/header'); %>
+﻿<%- include('partials/header') %>
 
-<h3 class="display-5 mt-5 mb-5">Admin Add</h3>
-<p id="error-message" class="text-danger display-5 mt-5 mb-5"><%=body.error%></p>
+<h1 class="mb-1" style="font-size:1.25rem;font-weight:800;color:var(--clr-primary)">
+  <i class="fas fa-plus-circle me-1" style="color:var(--clr-accent)"></i> Add Community
+</h1>
+<p class="mb-3" style="font-size:.8rem;color:var(--clr-muted)">Add or update a gated community's gate codes</p>
 
-<form require action="<%= body.domain %>/adminAdd" method="POST" id="add-community-form" autocomplete="on">
-  <div class="col-lg-6 offset-lg-3">
-    <input type="text" autofocus name="communityName" value='<%= location? location.communityName : "" %>' class="mb-2 form-control" id="communityName" placeholder="Community Name">
+<% if (body.message) { %>
+  <div class="ss-alert ss-alert-success mb-3">
+    <i class="fas fa-check-circle me-1"></i> <%= body.message %>
+  </div>
+<% } %>
+<% if (body.error) { %>
+  <div class="ss-alert ss-alert-danger mb-3" id="error-message">
+    <i class="fas fa-exclamation-circle me-1"></i> <%= body.error %>
+  </div>
+<% } %>
+<p class="ss-alert ss-alert-danger mb-3 d-none" id="js-error-message"></p>
 
-    <div class="row gate-code-container">
-      <div class="input-group mb-2 col-6">
-        <input type="text" class="form-control gate-code-description" placeholder="Gate Code Description" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
-      </div>
-      <div class="input-group mb-2 col-6">
-        <input required type="text" class="form-control gate-code" placeholder="Gate Code #" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
-        <div class="input-group-append">
-          <button class="btn btn-outline-warning" type="button" onclick="addGateCodeField()" id="button-addon1"><i class="fas fa-plus"></i></button>
-        </div>
-      </div>
-    </div>
+<form action="<%= body.domain %>/adminAdd" method="POST" id="add-community-form" autocomplete="on">
 
-    <div class="street-address-container">
-      <div class="input-group mb-2">
-        <input required type="text" value="<%= location? location.street : '' %>" autocomplete="on" class="mb-2 form-control street-address" id="autocomplete-address" placeholder="(Type only the Street names)">
-
-        <div class="input-group-append mb-2">
-          <button class="btn btn-outline-warning"  onclick="addAddressField()" type="button" id="addAddress"><i class="fas fa-plus"></i></button>
-        </div>
-      </div>
-    </div>
-
-    <div class="row city-state-container">
-      <div class="input-group mb-2 col-6">
-        <input type="text" id="city" name="city" value='<%= location ? location.city:"" %>'  class="form-control city" placeholder="City Name" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
-
-      </div>
-      <div class="input-group mb-2 col-6">
-          <input required id="stateCode" type="text" name="stateCode" value='<%= location? location.stateCode : "" %>' class="form-control gate-code" placeholder="State Code" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">
-      </div>
-    </div>
-
-    
+  <!-- Step 1: Community Name -->
+  <div class="admin-section">
+    <p class="admin-section-title"><i class="fas fa-home me-1"></i> Community Name</p>
+    <input type="text" autofocus name="communityName" id="communityName"
+      value="<%= location ? location.communityName : '' %>"
+      class="form-control" placeholder="e.g. Oakwood Reserve">
   </div>
 
-  <div class="container mt-2">
-    <div class="input-group mb-2">
-      <input required type="password" value="" autocomplete="on"
-        class="mb-2 form-control " id="password" name="password" placeholder="Admin Password">
+  <!-- Step 2: Gate Codes -->
+  <div class="admin-section">
+    <p class="admin-section-title"><i class="fas fa-key me-1"></i> Gate Codes</p>
+    <div id="gate-code-container">
+      <div class="field-pair">
+        <input type="text" class="form-control gate-code-description" placeholder="Description (e.g. Main Gate)" value="">
+        <input type="text" class="form-control gate-code" placeholder="Code" value="" style="max-width:110px">
+      </div>
     </div>
-  </div>
-  <div class="col-lg-6 offset-lg-3 mt-2">
-    <button type="button" onclick="sendForm()" class="btn btn-primary btn-block">Add</button>
-    <!-- <button type="button" onclick="addNewStreet()" class="btn btn-primary btn-block">Add</button> -->
+    <button type="button" class="btn-add-field" onclick="addGateCodeField()">
+      <i class="fas fa-plus"></i> Add another gate code
+    </button>
   </div>
 
-  <div class="d-none" hidden>
-  <!-- <div class=""> -->
-    <textarea   name="gateCodesJSON" id="gate-code-JSON" rows="3" cols="80"></textarea>
-    <textarea   name="streetsJSON" id="streets-JSON" rows="3" cols="80"></textarea>
+  <!-- Step 3: Streets -->
+  <div class="admin-section">
+    <p class="admin-section-title"><i class="fas fa-road me-1"></i> Streets in this Community</p>
+
+    <!-- Street input with autocomplete + Add button -->
+    <div class="street-ac-wrapper mb-2" id="street-ac-wrapper">
+      <div class="field-pair">
+        <input type="text" class="form-control" id="discover-street-input"
+          value="<%= location ? location.street : '' %>"
+          placeholder="Type a street name (e.g. Hughes Drive)"
+          autocomplete="off"
+          oninput="streetInputChange(this)"
+          onkeydown="streetInputKeyDown(event)">
+        <button type="button" class="btn-add-street" onclick="addCurrentStreet()" title="Add this street">
+          <i class="fas fa-plus me-1"></i> Add
+        </button>
+        <button type="button" class="btn-discover" id="discover-btn" onclick="discoverStreets()" title="Find all streets in this area via map data">
+          <i class="fas fa-magic"></i> Discover
+        </button>
+      </div>
+      <div class="street-ac-dropdown d-none" id="street-ac-dropdown"></div>
     </div>
+
+    <!-- Discovery results (populated by JS) -->
+    <div id="discovery-results" class="d-none">
+      <div class="discovery-list">
+        <p class="discovery-list-title"><i class="fas fa-list me-1"></i> Streets found nearby &mdash; select to add</p>
+        <div id="discovery-items"></div>
+      </div>
+      <button type="button" class="btn-add-discovered" onclick="addDiscoveredStreets()">
+        <i class="fas fa-check me-1"></i> Add Selected Streets
+      </button>
+    </div>
+
+    <!-- Added streets shown as tags -->
+    <div id="street-tags-container" class="mt-2"></div>
+    <div id="street-hidden-inputs"></div>
+
+    <!-- Add another street -->
+    <button type="button" class="btn-add-field mt-1" onclick="document.getElementById('discover-street-input').focus()">
+      <i class="fas fa-plus"></i> Add another street
+    </button>
+  </div>
+
+  <!-- Step 4: Location -->
+  <div class="admin-section">
+    <p class="admin-section-title"><i class="fas fa-map-pin me-1"></i> Location</p>
+    <div class="field-pair">
+      <input type="text" id="city" name="city"
+        value="<%= location ? location.city : '' %>"
+        class="form-control" placeholder="City">
+      <input type="text" id="stateCode" name="stateCode"
+        value="<%= location ? location.stateCode : '' %>"
+        class="form-control" placeholder="State Code" style="max-width:120px">
+    </div>
+  </div>
+
+  <!-- Admin Password -->
+  <div class="admin-section">
+    <p class="admin-section-title"><i class="fas fa-lock me-1"></i> Admin Password</p>
+    <input type="password" class="form-control" id="password" name="password"
+      placeholder="Enter admin password" autocomplete="current-password">
+  </div>
+
+  <!-- Hidden JSON fields -->
+  <textarea class="d-none" name="gateCodesJSON" id="gate-code-JSON"></textarea>
+  <textarea class="d-none" name="streetsJSON" id="streets-JSON"></textarea>
+
+  <div class="d-grid mt-1">
+    <button type="button" onclick="sendForm()" class="btn-primary-block">
+      <i class="fas fa-save me-1"></i> Save Community
+    </button>
+  </div>
 </form>
 
-
-<%- include('partials/footerAdmin'); %>
+<%- include('partials/footerAdmin') %>

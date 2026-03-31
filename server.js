@@ -1,525 +1,604 @@
-const SERVER = !(process.execPath.includes("C:"));//process.env.PORT;
-if (!SERVER){
-  // console.error(SERVER);
-  require("dotenv").config();
+﻿// -----------------------------------------
+// SmartStop Server
+// -----------------------------------------
+
+// Load .env in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
 }
 
-const APIKEY = process.env.APIKEY;
-const ADMINPASS = process.env.ADMINPASS;
-const ADMINCONSOLE = process.env.ADMINCONSOLE;
-const CLIENT_ID = process.env.CLIENT_ID
-const CLIENT_SECRETE = process.env.CLIENT_SECRETE;
-const PASSWORD = process.env.PASSWORD;
-const SECRETE = process.env.SECRETE;
+const ADMINPASS      = process.env.ADMINPASS;
+const ADMINCONSOLE   = process.env.ADMINCONSOLE;
+const ADMIN_SEED_ID  = process.env.ADMIN_SEED_ID || '';
+const ADMIN_SEED_NAME = process.env.ADMIN_SEED_NAME || 'SmartStop Admin';
+const CLIENT_ID      = process.env.CLIENT_ID;
+const CLIENT_SECRET  = process.env.CLIENT_SECRET || process.env.CLIENT_SECRETE;
+const SESSION_SECRET = process.env.SESSION_SECRET || process.env.SECRETE;
+const APP_DIRECTORY  = process.env.APP_DIRECTORY || '';
+const BASE_URL       = process.env.BASE_URL || '';
+const DEBUG_API      = (process.env.DEBUG_API || '').toLowerCase() === 'true';
+const ADMIN_EMAILS   = (process.env.ADMIN_EMAILS || '').split(',').map(function(e) { return e.trim().toLowerCase(); }).filter(Boolean);
 
-/*********Handling Server / Local Enviromnemnt sensitive variables************/
-const APP_DIRECTORY = !(SERVER) ? "" : ((process.env.APP_DIRECTORY) ? (process.env.APP_DIRECTORY) : "");
-const PUBLIC_FOLDER = (SERVER) ? "./" : "../";
+const express              = require('express');
+const https                = require('https');
+const crypto               = require('crypto');
+const helmet               = require('helmet');
+const rateLimit            = require('express-rate-limit');
+const bodyParser           = require('body-parser');
+const compression          = require('compression');
+const mongoose             = require('mongoose');
+const findOrCreate         = require('mongoose-findorcreate');
+const _                    = require('lodash');
+const session              = require('express-session');
+const passport             = require('passport');
+const passportLocalMongoose = require('passport-local-mongoose');
+const GoogleStrategy       = require('passport-google-oauth20').Strategy;
 
-const express = require("express");
 const app = express();
-const ejs = require("ejs");
-const https = require("https");
-const bodyParser = require("body-parser");
-const mongoose = require("mongoose");
-const findOrCreate = require("mongoose-findorcreate");
-const _ = require("lodash");
 
-
-/*************** Authentication & Session Management ********************/
-const session = require("express-session");
-const passport = require("passport");
-const passportLocalMongoose = require("passport-local-mongoose");
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-
-
-// app.use( express.static('public'));
-
-// Configure app to user EJS abd bodyParser
-app.set("view engine", "ejs");
-app.use(bodyParser.urlencoded({
-  extended: true
-}));
-app.use(express.static("public"));
-// app.use(express.static(APP_DIRECTORY+"/public"));
-// app.use(express.static("."));
-// app.use(express.json()); 
-
-
-
-
-/******************** Authentication Setup & Config *************/
-//Authentication & Session Management Config
+// -- Middleware
+app.set('view engine', 'ejs');
+app.set('trust proxy', 1); // required behind Heroku/reverse-proxy for rate limiting and secure cookies
+app.use(helmet({ contentSecurityPolicy: false })); // CSP disabled — tune separately per deployment
+app.use(compression());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.static('public'));
+if (APP_DIRECTORY) {
+  app.use(APP_DIRECTORY, express.static('public'));
+}
 app.use(session({
-  secret: SECRETE,
+  secret: SESSION_SECRET,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 8 * 60 * 60 * 1000  // 8-hour session
+  }
 }));
 app.use(passport.initialize());
 app.use(passport.session());
 
-
-
-const uri = "mongodb+srv://Admin-Avis:" + PASSWORD + "@db1.s2pl8.mongodb.net/auto-g-codes-0";
-mongoose.connect(uri, {
+// -- Database
+const mongoUri = process.env.MONGODB_URI;
+mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  useFindAndModify: false
-});
-mongoose.set("useCreateIndex", true);
+  useCreateIndex: true
+}).catch(function(err) { console.error('MongoDB connection error:', err); });
 
+// -- Schemas & Models
 const userSchema = new mongoose.Schema({
   username: String,
   _id: String,
   verified: { type: Boolean, default: false }
 });
-// Tell the User Schema to use the passportLocalMongoose plugin
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
 
 const communitySchema = new mongoose.Schema({
-  communityName: String,
-  streets: [String], //array of location objects
-  city: String,
-  stateCode: String,
-  gateCodes: [{ // array of gateCode Objects
-    description: String,
-    code: String
-  }]
-});
-// const allowedUserSchema = new mongoose.Schema({
-//   googleId: String
-// });
-
-const User = mongoose.model("User", userSchema);
-// const AllowedUser = mongoose.model("AllowedUser", allowedUserSchema);
-const Community = mongoose.model("Community", communitySchema);
-
-
-/********* Configure Passport **************/
-passport.use(User.createStrategy());
-//Serialize implementation
-passport.serializeUser(function(user, done) {
-  done(null, user);
-});
-//deserialize implementation
-passport.deserializeUser(function(user, done) {
-  done(null, user);
+  communityName: { type: String, index: true },
+  streets:       { type: [String], index: true },
+  city:          String,
+  stateCode:     String,
+  gateCodes:     [{ description: String, code: String }]
 });
 
-//telling passport to use GoogleStrategy
-passport.use(new GoogleStrategy({
-    clientID: CLIENT_ID,
-    clientSecret: CLIENT_SECRETE,
-    callbackURL: (SERVER ? "https://triumphcourier.com" : "" ) + APP_DIRECTORY+"/loggedIn",
-    userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
-    
-  },
-  function(accessToken, refreshToken, profile, cb) {
-    let userProfile = profile._json;
+const User      = mongoose.model('User', userSchema);
+const Community = mongoose.model('Community', communitySchema);
 
-    User.findOne({
-      _id: userProfile.sub
-    }, function(err, user) {
-      console.log(err);
-      if (!err) {
-        console.log("userFOund---->:");
-        console.log(user);
-        if (user) {
-            if (user.verified) {
-              console.log("Logged In as: " + userProfile.name);
-              return cb(null, user)
-            } else {
-              console.log("Logged in but Still Unauthorized");
-              return cb(err);
-            }
-        } else {
-          console.log("user not found - creating new user");
-          let newUser = new User({
-            username: userProfile.name,
-            _id: userProfile.sub,
-            verified: false
-          })
-          newUser.save()
-            .then(function() {
-              console.log("User Created Successfully");
-              return cb(err);
-            })
-            .catch(function(err) {
-              console.log("failed to create user");
-              console.log(err);
-            });
-        }
+const pendingCodeSchema = new mongoose.Schema({
+  street:              { type: String, required: true },
+  city:                String,
+  stateCode:           String,
+  postalCode:          String,
+  gateCodeDescription: String,
+  gateCode:            String,
+  submittedAt:         { type: Date, default: Date.now }
+});
+const PendingCode = mongoose.model('PendingCode', pendingCodeSchema);
+
+async function seedAdminIfConfigured() {
+  if (!ADMIN_SEED_ID) return;
+  try {
+    const existing = await User.findById(ADMIN_SEED_ID);
+    if (existing) {
+      if (!existing.verified) {
+        existing.verified = true;
+        await existing.save();
+        console.log('[seed] Existing admin was unverified and is now verified:', ADMIN_SEED_ID);
       } else {
-        console.log("Internal error");
-        return cb(new Error(err))
+        console.log('[seed] Admin already exists and is verified:', ADMIN_SEED_ID);
       }
-    });
+      return;
+    }
+
+    await new User({
+      _id: ADMIN_SEED_ID,
+      username: ADMIN_SEED_NAME,
+      verified: true
+    }).save();
+    console.log('[seed] Admin user created:', ADMIN_SEED_ID);
+  } catch (err) {
+    console.error('[seed] Failed to seed admin user:', err.message);
+  }
+}
+
+mongoose.connection.once('open', function() {
+  seedAdminIfConfigured();
+});
+
+// -- Passport
+passport.use(User.createStrategy());
+passport.serializeUser(function(user, done) { done(null, user); });
+passport.deserializeUser(function(user, done) { done(null, user); });
+
+passport.use(new GoogleStrategy(
+  {
+    clientID:       CLIENT_ID,
+    clientSecret:   CLIENT_SECRET,
+    callbackURL:    BASE_URL + APP_DIRECTORY + '/loggedIn',
+    userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
+  },
+  async function(accessToken, refreshToken, profile, cb) {
+    const p = profile._json || {};
+    const sub = p.sub;
+    const email = (p.email || (profile.emails && profile.emails[0] && profile.emails[0].value) || '').toLowerCase();
+    const isWhitelistedEmail = ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes(email);
+    debugLog('/auth/google profile', { sub, email, whitelisted: isWhitelistedEmail });
+    try {
+      let user = await User.findById(sub);
+      if (user) {
+        if (!user.verified && isWhitelistedEmail) {
+          user.verified = true;
+          await user.save();
+        }
+        return user.verified ? cb(null, user) : cb(null, false);
+      }
+      const newUser = new User({ username: p.name || email || 'Unknown User', _id: sub, verified: isWhitelistedEmail });
+      await newUser.save();
+      return cb(null, isWhitelistedEmail ? newUser : false);
+    } catch (err) {
+      return cb(err);
+    }
   }
 ));
 
+// -- Helpers
+function sanitize(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/[<>"'&]/g, function(c) {
+    return { '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', '&': '&amp;' }[c];
+  });
+}
 
+function makeBody(title, error, message) {
+  return { title: title, error: error || '', message: message || '', domain: APP_DIRECTORY };
+}
 
-/**************************** Route aHandling ********************************/
-app.route(APP_DIRECTORY+"/")
-  .get(function(req, res) {
-    
-    // if (req.isAuthenticated() || req.headers.host === "localhost:3000") {
-    if (req.isAuthenticated() ) {
-      console.log("Authorised Request");
-      res.render("home", {
-        body: new Body("SmartStop", "", "", APP_DIRECTORY)
+function requireAuth(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  res.redirect(APP_DIRECTORY + '/login');
+}
+
+function debugLog() {
+  if (!DEBUG_API) return;
+  const args = Array.prototype.slice.call(arguments);
+  console.log.apply(console, ['[debug]'].concat(args));
+}
+
+function safeCompare(a, b) {
+  try {
+    var ab = Buffer.from(String(a));
+    var bb = Buffer.from(String(b));
+    if (ab.length !== bb.length) return false;
+    return crypto.timingSafeEqual(ab, bb);
+  } catch (e) {
+    return false;
+  }
+}
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests. Please try again later.'
+});
+
+// -- Nominatim (OpenStreetMap) geocoding helpers — no API key required
+const NOMINATIM_USER_AGENT = 'SmartStopApp/1.0 (internal-tool)';
+
+function nominatimReverseGeocode(lat, lon) {
+  return new Promise(function(resolve, reject) {
+    var url = 'https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lon + '&format=json&addressdetails=1';
+    var options = {
+      hostname: 'nominatim.openstreetmap.org',
+      path: '/reverse?lat=' + lat + '&lon=' + lon + '&format=json&addressdetails=1',
+      method: 'GET',
+      headers: {
+        'User-Agent': NOMINATIM_USER_AGENT,
+        'Accept-Language': 'en'
+      }
+    };
+    var req = https.request(options, function(res) {
+      var raw = '';
+      res.on('data', function(chunk) { raw += chunk; });
+      res.on('end', function() {
+        try { resolve(JSON.parse(raw)); } catch (e) { reject(e); }
       });
-    } else {
-      console.log("UN-authenticated Request");
-      res.redirect(APP_DIRECTORY+"/login");
-    }
-  })
-
-app.route(APP_DIRECTORY+"/login")
-  .get(function(req, res) {
-    res.render("login", {
-      body: new Body("Login", "", "", APP_DIRECTORY)
     });
-  })
+    req.on('error', reject);
+    req.end();
+  });
+}
 
-app.get(APP_DIRECTORY+'/auth/google', passport.authenticate('google', {
-  scope: ['profile']
-})
+function nominatimForwardGeocode(query) {
+  return new Promise(function(resolve, reject) {
+    var options = {
+      hostname: 'nominatim.openstreetmap.org',
+      path: '/search?q=' + encodeURIComponent(query) + '&format=json&addressdetails=1&limit=1',
+      method: 'GET',
+      headers: {
+        'User-Agent': NOMINATIM_USER_AGENT,
+        'Accept-Language': 'en'
+      }
+    };
+    var req = https.request(options, function(res) {
+      var raw = '';
+      res.on('data', function(chunk) { raw += chunk; });
+      res.on('end', function() {
+        try { resolve(JSON.parse(raw)); } catch (e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+function httpsPostJSON(options, body) {
+  return new Promise(function(resolve, reject) {
+    var req = https.request(options, function(res) {
+      var raw = '';
+      res.on('data', function(chunk) { raw += chunk; });
+      res.on('end', function() {
+        try { resolve(JSON.parse(raw)); } catch (e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+function nominatimAddressToHere(data) {
+  // Normalise Nominatim reverse-geocode response into the shape the rest of the
+  // app already expects (previously from HERE).  Returns null if no address.
+  if (!data || !data.address) return null;
+  var a = data.address;
+  var street = a.road || a.pedestrian || a.footway || a.path || a.cycleway || '';
+  var city   = a.city || a.town || a.village || a.municipality || a.suburb || a.hamlet || a.county || '';
+  return {
+    street:    street,
+    city:      city,
+    stateCode: a.state || '',
+    postalCode: a.postcode || '',
+    countryCode: (a.country_code || '').toUpperCase()
+  };
+}
+
+// Expand common street abbreviations so Nominatim matches better
+function expandStreetAbbreviation(name) {
+  var abbrs = {
+    'dr': 'Drive', 'st': 'Street', 'ave': 'Avenue', 'av': 'Avenue',
+    'blvd': 'Boulevard', 'ln': 'Lane', 'ct': 'Court', 'rd': 'Road',
+    'pl': 'Place', 'pkwy': 'Parkway', 'cir': 'Circle', 'hwy': 'Highway',
+    'ter': 'Terrace', 'terr': 'Terrace', 'trl': 'Trail', 'fwy': 'Freeway'
+  };
+  var parts = name.trim().split(/\s+/);
+  var last = parts[parts.length - 1].toLowerCase().replace(/\.$/, '');
+  if (abbrs[last]) parts[parts.length - 1] = abbrs[last];
+  return parts.join(' ');
+}
+
+// -- Routes
+
+app.get(APP_DIRECTORY + '/', requireAuth, function(req, res) {
+  res.render('home', { body: makeBody('SmartStop', '', '') });
+});
+
+app.get(APP_DIRECTORY + '/login', function(req, res) {
+  res.render('login', { body: makeBody('Login', '', '') });
+});
+
+app.get(APP_DIRECTORY + '/auth/google',
+  authLimiter,
+  passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
-app.route(APP_DIRECTORY+"/loggedIn")
-  .get(passport.authenticate('google', {
-      failureRedirect: APP_DIRECTORY+'/login'
-    }),
-    function(req, res) {
-      // Successful authentication, redirect user page.
-      // console.log("Logged IN");
-      // console.log(user);
-      // res.redirect(APP_DIRECTORY+"/");
-      res.render('home', {
-        body: new Body("SmartStop", "", "SmartStop Authentication Successful", APP_DIRECTORY)
-      });
-    })
+app.get(APP_DIRECTORY + '/loggedIn',
+  passport.authenticate('google', { failureRedirect: APP_DIRECTORY + '/login' }),
+  function(req, res) {
+    res.redirect(APP_DIRECTORY + '/');
+  }
+);
 
-
-app.route(APP_DIRECTORY+"/logout")
-  .get(function(req, res) {
-    req.logout();
-    console.log("Logged Out");
-    res.redirect(APP_DIRECTORY+"/");
-    // res.render("ho", {body:new Body("Login","","Logged out Successfully", APP_DIRECTORY)})
-  });
-
-app.route(APP_DIRECTORY+"/locate")
-  .get(function(req, res) {
-    res.redirect(APP_DIRECTORY+"/");
-  })
-  .post(function(req, res) {
-    const position = req.body.position;
-    // console.log(position);
-    const url = 'https://revgeocode.search.hereapi.com/v1/revgeocode?apiKey=' + APIKEY + '&at=' + position + '&lang=en-US'
-    https.get(url, function(response) {
-      response.on("data", function(data) {
-        const location = JSON.parse(data).items[0].address;
-        // Community.find({streets:location.street},function(err, foundObj){
-        Community.find({
-          streets: location.street
-        }, function(err, foundObj) {
-          if (!err) {
-            if (foundObj[0]) {
-              const communityResult = {
-                streets: foundObj[0].streets,
-                communityName: foundObj[0].communityName,
-                gateCodes: foundObj[0].gateCodes
-              }
-              // res.send(foundObj);
-              res.render("code", {
-                body: new Body("SmartStop", "", "", APP_DIRECTORY),
-                community: communityResult,
-                location: location
-              })
-            } else {
-              const communityResult = {
-                streets: [location.street],
-                locationJSON: JSON.stringify(location),
-                communityName: "Unregistered",
-                gateCodes: []
-              }
-              // res.send(communityResult);
-              res.render("code", {
-                body: new Body("SmartStop", "Unregistered Community", "", APP_DIRECTORY),
-                community: communityResult,
-                location: location
-              });
-            }
-          } else {
-            res.send("error");
-          }
-        });
-
-      });
-    });
-  })
-
-app.route(APP_DIRECTORY+"/search/:searchPhrase")
-  .get(function (req, res) {
-    const searchPhrase = _.startCase(_.toLower(req.params.searchPhrase));
-    
-    const searchRegex = "^"+searchPhrase+"";
-    const re = new RegExp(searchRegex);
-    // console.log(re);
-    Community.find({$or: [{streets: { $regex: re }}, {communityName:{ $regex: re }}] }, function (err, foundObj){
-      if (!err) {
-        // console.log(foundObj);
-        if (foundObj) {
-          if (foundObj.length > 0){
-            res.send(foundObj); 
-          }else{
-            // res.send("Found Nothing: " + searchPhrase);
-            res.send(null);
-          }
-        } else {
-          // res.send("No Search Results for: " + searchPhrase);
-          res.send(null);
-        }
-      } else {
-        res.send("error: " + err);
-      }
-    });
-    
-    // Community.find({streets: searchPrase}, function (err, foundObj) {
-    //   if(!err){
-    //     if(foundObj.length > 0){
-    //       res.send(foundObj);
-    //     }else{
-    //       res.send("No Search Results for: " + searchPrase);
-    //     }
-    //   }else{
-    //     res.send("error: " + err);
-    //   }
-    // });
-
-
-    // Article.find({ title_lower: title_lower }, function (err, docs) {
-    //   if (!err) {
-    //     if (docs.length > 0) {
-    //       res.send(docs);
-    //     } else {
-    //       res.send("no such article")
-    //       // res.send(err);
-    //     }
-    //   } else {
-    //     res.send(err);
-    //   }
-    // })
-
-
-  })
-
-
-app.route(APP_DIRECTORY+"/adminAdd")
-  .get(function(req, res) {
-    res.redirect(APP_DIRECTORY+"/");
-  })
-  .post(function(req, res) {
-
-    // console.log(req.body.password);
-    const community = new Community({
-      communityName: (req.body.communityName.trim()) ? req.body.communityName.trim() : "-- Missing Name --" ,
-      streets: JSON.parse(req.body.streetsJSON), //array of location objects
-      city: req.body.city.trim(),
-      stateCode: req.body.stateCode.trim(),
-      gateCodes: JSON.parse(req.body.gateCodesJSON), // array of gateCode Objects
-    });
-
-    if (req.body.password === ADMINPASS){
-      // console.log("Admin Pass Confirmed");
-      Community.exists({
-        communityName: community.communityName
-      }, function(err, exists) {
-        if (!exists) {
-          // console.log("No duplicates found");
-          community.save(function(err, savedDoc) {
-            if (!err) {
-              const communityResult = {
-                streets: savedDoc.streets,
-                communityName: savedDoc.communityName,
-                gateCodes: savedDoc.gateCodes
-              }
-              res.render("home", {
-                body: new Body("Admin Add", "", "Succesfully added with no duplicates " + savedDoc.communityName + " communityt", APP_DIRECTORY),
-                community: communityResult
-              });
-            } else {
-              res.render("code", {
-                body: new Body("Admin Add", "Error: Failed to save the gate codes --> " + err, "", APP_DIRECTORY),
-                location: community
-              })
-            }
-          });
-        } else {
-          console.log("found duplicate");
-          // console.log(community.streets);
-          Community.findOneAndUpdate({ communityName: community.communityName }, 
-            { $addToSet: { streets: { $each: community.streets }, gateCodes: { $each: community.gateCodes } }, },
-            function(err, update){
-              if(!err){
-                res.render("adminAdd", {
-                  body: new Body("Admin", "", "Community '" + community.communityName + "', was updated successfully", APP_DIRECTORY),
-                  location: null
-                });
-              }else{
-                console.log("Encountered error: ");
-                console.log(err);
-                // console.log(exists);
-                res.render("adminAdd", {
-                  body: new Body("SmartStop|Admin", "Error: "+err.message, "", APP_DIRECTORY),
-                  location: community
-                });
-              }
-            });
-          
-          
-        }
-      });
-    }else{
-      console.log("No Admin Password");
-      res.render("adminAdd", {
-        body: new Body("Admin Add", "Error: Invalid Passord", APP_DIRECTORY),
-        location: community
-      });
-    }
-  })
-
-app.post(APP_DIRECTORY+"/resourceStreet", function(req, res) {
-  const position = req.body.position;
-  // console.log("RESOURCE: " + position);
-  const url = 'https://revgeocode.search.hereapi.com/v1/revgeocode?apiKey=' + APIKEY + '&at=' + position + '&lang=en-US'
-  https.get(url, function(response) {
-    response.on("data", function(data) {
-      const location = JSON.parse(data).items[0].address;
-      // console.log(location.street);
-      res.send(location.street);
-    });
+app.get(APP_DIRECTORY + '/logout', function(req, res, next) {
+  req.logout(function(err) {
+    if (err) return next(err);
+    res.redirect(APP_DIRECTORY + '/login');
   });
 });
 
-app.route(APP_DIRECTORY+"/adminInclude")
-  .get(function(req, res) {
-    // res.redirect(APP_DIRECTORY+"/") original code
-    res.render("adminAdd", {
-      body: new Body("SmartStop|Admin", "", "", APP_DIRECTORY),
-      location: null
-    })
-  })
-  .post(function(req, res) {
-    let location = JSON.parse(req.body.locationJSONString);
-    // console.log(location);
-    res.render("adminAdd", {
-      body: new Body("SmartStop|Admin", "", "", APP_DIRECTORY),
-      location: location
-    })
-  })
+app.get(APP_DIRECTORY + '/locate', function(req, res) {
+  res.redirect(APP_DIRECTORY + '/');
+});
 
-
-
-
-app.route(APP_DIRECTORY+"/adminConsole")
-  .get(function(req, res) {
-    User.find({}, function(err, foundUsers) {
-      if (!err) {
-        if (foundUsers) {
-          res.render("adminConsole", {
-            body: new Body("Admin Console", "", "", APP_DIRECTORY),
-            users: foundUsers
-          });
-        } else {
-          res.render("adminConsole", {
-            body: new Body("Admin Console", "No Users Found", "", APP_DIRECTORY),
-            users: undefined
-          });
-        }
-      } else {
-        res.render("adminConsole", {
-          body: new Body("Admin Console", "Unable to Search the database", "", APP_DIRECTORY),
-          users: undefined
-        });
-      }
-    });
-  })
-
-app.route(APP_DIRECTORY+"/verifyUser")
-  .post(function(req,res){
-    let id = req.body.userID;
-    console.log(id);
-    User.updateOne({_id:id}, { verified: true },function(err,updated){
-      if(updated.n > 0){
-        res.send(true);
-      }else{
-        console.log(err);
-        res.send(false);
-      }
-    })
-  })
-
-  app.route(APP_DIRECTORY+"/restrictUser")
-    .post(function(req,res){
-      let id = req.body.userID;
-      console.log(id);
-      User.updateOne({_id:id}, { verified: false },function(err,updated){
-        if(updated.n > 0){
-          res.send(true);
-        }else{
-          console.log(err);
-          res.send(false);
-        }
-      })
-    })
-
-app.route(APP_DIRECTORY+"/validatePassword")
-  .get(function(req, res) {
-    res.send(false);
-  })
-  .post(function(req, res) {
-    pass = req.body.password;
-    if (pass === ADMINPASS) {
-      res.send(true);
-    } else {
-      res.send(false);
+app.post(APP_DIRECTORY + '/locate', requireAuth, async function(req, res) {
+  var position = req.body.position;
+  try {
+    var parts = (position || '').split(',');
+    var lat = parseFloat(parts[0]);
+    var lon = parseFloat(parts[1]);
+    debugLog('/locate request', { position: position, lat: lat, lon: lon });
+    if (isNaN(lat) || isNaN(lon)) {
+      return res.render('home', { body: makeBody('SmartStop', 'Invalid position data. Please try again.', '') });
     }
-  })
+    var data = await nominatimReverseGeocode(lat, lon);
+    var location = nominatimAddressToHere(data);
+    debugLog('/locate Nominatim response', location);
+    if (!location || !location.street) {
+      return res.render('home', {
+        body: makeBody('SmartStop', 'Location lookup failed. Search manually above.', '')
+      });
+    }
+    var foundObj = await Community.find({ streets: location.street });
+    if (foundObj[0]) {
+      res.render('code', {
+        body: makeBody('SmartStop', '', ''),
+        community: { streets: foundObj[0].streets, communityName: foundObj[0].communityName, gateCodes: foundObj[0].gateCodes },
+        location: location
+      });
+    } else {
+      res.render('code', {
+        body: makeBody('SmartStop', 'Unregistered Community', ''),
+        community: { streets: [location.street], locationJSON: JSON.stringify(location), communityName: 'Unregistered', gateCodes: [] },
+        location: location
+      });
+    }
+  } catch (err) {
+    res.render('home', { body: makeBody('SmartStop', 'Location lookup failed. Please try again.', '') });
+  }
+});
 
-  app.route(APP_DIRECTORY+"/validateConsolePassword")
-    .get(function(req, res) {
-      res.send(false);
-    })
-    .post(function(req, res) {
-      pass = req.body.password;
-      // console.log(pass);
-      if (pass === ADMINCONSOLE) {
-        res.send(true);
-      } else {
-        res.send(false);
-      }
-    })
+app.get(APP_DIRECTORY + '/search/:searchPhrase', requireAuth, async function(req, res) {
+  var searchPhrase = _.startCase(_.toLower(req.params.searchPhrase));
+  var escaped = searchPhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  var re = new RegExp('^' + escaped, 'i');
+  try {
+    var results = await Community.find(
+      { $or: [{ streets: { $regex: re } }, { communityName: { $regex: re } }] },
+      'communityName streets gateCodes'
+    ).limit(10);
+    res.json(results.length ? results : null);
+  } catch (err) {
+    res.json(null);
+  }
+});
+
+app.get(APP_DIRECTORY + '/adminAdd', function(req, res) {
+  res.redirect(APP_DIRECTORY + '/');
+});
+
+app.post(APP_DIRECTORY + '/adminAdd', requireAuth, async function(req, res) {
+  if (!safeCompare(req.body.password, ADMINPASS)) {
+    return res.render('adminAdd', {
+      body: makeBody('Admin Add', 'Invalid password', ''),
+      location: null
+    });
+  }
+  var communityName = sanitize((req.body.communityName || '').trim() || '-- Missing Name --');
+  var city          = sanitize((req.body.city || '').trim());
+  var stateCode     = sanitize((req.body.stateCode || '').trim());
+  var streets       = JSON.parse(req.body.streetsJSON).map(function(s) { return sanitize(s); });
+  var gateCodes     = JSON.parse(req.body.gateCodesJSON).map(function(g) {
+    return { description: sanitize(g.description), code: sanitize(g.code) };
+  });
+
+  try {
+    var exists = await Community.exists({ communityName: communityName });
+    if (!exists) {
+      var saved = await new Community({ communityName: communityName, streets: streets, city: city, stateCode: stateCode, gateCodes: gateCodes }).save();
+      res.render('adminAdd', {
+        body: makeBody('Admin Add', '', 'Successfully added "' + saved.communityName + '"'),
+        location: null
+      });
+    } else {
+      await Community.findOneAndUpdate(
+        { communityName: communityName },
+        { $addToSet: { streets: { $each: streets }, gateCodes: { $each: gateCodes } } }
+      );
+      res.render('adminAdd', {
+        body: makeBody('Admin', '', '"' + communityName + '" updated successfully'),
+        location: null
+      });
+    }
+  } catch (err) {
+    console.error('[adminAdd] Database error:', err.message);
+    res.render('adminAdd', {
+      body: makeBody('Admin Add', 'Database error. Please try again.', ''),
+      location: null
+    });
+  }
+});
+
+app.post(APP_DIRECTORY + '/resourceStreet', requireAuth, async function(req, res) {
+  try {
+    var parts = (req.body.position || '').split(',');
+    var lat = parseFloat(parts[0]);
+    var lon = parseFloat(parts[1]);
+    debugLog('/resourceStreet request', { position: req.body.position, lat: lat, lon: lon });
+    if (isNaN(lat) || isNaN(lon)) return res.send('');
+    var data = await nominatimReverseGeocode(lat, lon);
+    var location = nominatimAddressToHere(data);
+    debugLog('/resourceStreet result', location);
+    res.send((location && location.street) || '');
+  } catch (err) {
+    debugLog('/resourceStreet error', err.message);
+    res.send('');
+  }
+});
+
+app.post(APP_DIRECTORY + '/discoverStreets', requireAuth, async function(req, res) {
+  var streetName = req.body.streetName;
+  var city       = req.body.city;
+  var state      = req.body.state;
+  if (!streetName || !city) return res.json({ streets: [] });
+
+  try {
+    var q = streetName + ', ' + city + (state ? ', ' + state : '');
+    debugLog('/discoverStreets geocode request', { streetName: streetName, city: city, state: state, q: q });
+    var geoData = await nominatimForwardGeocode(q);
+
+    if (!geoData || !geoData.length) {
+      debugLog('/discoverStreets geocode returned no items');
+      return res.json({ streets: [] });
+    }
+
+    var lat           = parseFloat(geoData[0].lat);
+    var lng           = parseFloat(geoData[0].lon);
+    var geoAddr       = geoData[0].address || {};
+    var returnedCity  = geoAddr.city || geoAddr.town || geoAddr.village || city;
+    var returnedState = geoAddr.state || state || '';
+
+    var overpassQuery = '[out:json][timeout:25];way(around:800,' + lat + ',' + lng + ')["highway"]["name"];out body;';
+    debugLog('/discoverStreets overpass query', overpassQuery);
+    var overpassData  = await httpsPostJSON(
+      {
+        hostname: 'overpass-api.de',
+        path:     '/api/interpreter',
+        method:   'POST',
+        headers:  { 'Content-Type': 'application/x-www-form-urlencoded' }
+      },
+      'data=' + encodeURIComponent(overpassQuery)
+    );
+
+    var seen    = new Set();
+    var streets = (overpassData.elements || [])
+      .map(function(e) { return e.tags && e.tags.name; })
+      .filter(function(name) { return name && !seen.has(name) && seen.add(name); })
+      .sort();
+
+    debugLog('/discoverStreets streets found', streets.length);
+
+    res.json({ streets: streets, city: returnedCity, state: returnedState });
+  } catch (err) {
+    debugLog('/discoverStreets error', err.message);
+    res.json({ streets: [] });
+  }
+});
+
+app.get(APP_DIRECTORY + '/streetSuggest', requireAuth, async function(req, res) {
+  var q = (req.query.q || '').trim();
+  if (q.length < 3) return res.json([]);
+  try {
+    var city  = (req.query.city || '').trim();
+    var query = city ? q + ', ' + city : q;
+    var options = {
+      hostname: 'nominatim.openstreetmap.org',
+      path: '/search?q=' + encodeURIComponent(query) + '&format=json&addressdetails=1&limit=8',
+      method: 'GET',
+      headers: { 'User-Agent': NOMINATIM_USER_AGENT, 'Accept-Language': 'en' }
+    };
+    var results = await new Promise(function(resolve, reject) {
+      var r = https.request(options, function(resp) {
+        var raw = '';
+        resp.on('data', function(c) { raw += c; });
+        resp.on('end', function() { try { resolve(JSON.parse(raw)); } catch(e) { reject(e); } });
+      });
+      r.on('error', reject);
+      r.end();
+    });
+    var seen = {};
+    var streets = [];
+    (results || []).forEach(function(item) {
+      if (!item.address) return;
+      var road = item.address.road || item.address.pedestrian || item.address.footway || item.address.path || '';
+      if (!road || seen[road]) return;
+      seen[road] = true;
+      var c = item.address.city || item.address.town || item.address.village || item.address.suburb || '';
+      var s = item.address.state || '';
+      streets.push({ street: road, city: c, state: s });
+    });
+    debugLog('/streetSuggest', { q: q, city: city, results: streets.length });
+    res.json(streets.slice(0, 6));
+  } catch (err) {
+    debugLog('/streetSuggest error', err.message);
+    res.json([]);
+  }
+});
+
+app.get(APP_DIRECTORY + '/adminInclude', requireAuth, function(req, res) {
+  res.render('adminAdd', { body: makeBody('SmartStop | Admin', '', ''), location: null });
+});
+
+app.post(APP_DIRECTORY + '/adminInclude', requireAuth, function(req, res) {
+  var rawLocation = (req.body && req.body.locationJSONString) ? String(req.body.locationJSONString).trim() : '';
+  if (!rawLocation) {
+    return res.render('home', {
+      body: makeBody('SmartStop', 'Location data missing. Please click Re-locate and try again.', '')
+    });
+  }
+
+  try {
+    var location = JSON.parse(rawLocation);
+    res.render('adminAdd', { body: makeBody('SmartStop | Admin', '', ''), location: location });
+  } catch (err) {
+    debugLog('/adminInclude invalid location JSON', rawLocation);
+    res.render('home', {
+      body: makeBody('SmartStop', 'Invalid location data. Please click Re-locate and try again.', '')
+    });
+  }
+});
+
+app.get(APP_DIRECTORY + '/adminConsole', requireAuth, async function(req, res) {
+  try {
+    var users = await User.find({});
+    var pendingCodes = await PendingCode.find({}).sort({ submittedAt: -1 });
+    res.render('adminConsole', { body: makeBody('Admin Console', '', ''), users: users || [], pendingCodes: pendingCodes || [] });
+  } catch (err) {
+    res.render('adminConsole', { body: makeBody('Admin Console', 'Unable to search the database', ''), users: [], pendingCodes: [] });
+  }
+});
+
+app.post(APP_DIRECTORY + '/verifyUser', requireAuth, async function(req, res) {
+  try {
+    var r = await User.updateOne({ _id: req.body.userID }, { verified: true });
+    res.json((r.modifiedCount || r.nModified || 0) > 0);
+  } catch (err) {
+    res.json(false);
+  }
+});
+
+app.post(APP_DIRECTORY + '/restrictUser', requireAuth, async function(req, res) {
+  try {
+    var r = await User.updateOne({ _id: req.body.userID }, { verified: false });
+    res.json((r.modifiedCount || r.nModified || 0) > 0);
+  } catch (err) {
+    res.json(false);
+  }
+});
+
+app.route(APP_DIRECTORY + '/validatePassword')
+  .get(function(req, res) { res.json(false); })
+  .post(authLimiter, function(req, res) { res.json(safeCompare(req.body.password, ADMINPASS)); });
+
+app.route(APP_DIRECTORY + '/validateConsolePassword')
+  .get(function(req, res) { res.json(false); })
+  .post(authLimiter, function(req, res) { res.json(safeCompare(req.body.password, ADMINCONSOLE)); });
 
 app.listen(process.env.PORT || 3000, function() {
-  console.error("SmartStop is live on port " + ((process.env.PORT) ? process.env.PORT : 3000));
-})
-
-
-
-/*******************functionalities********************/
-function allowedUser(userID) {
-
-}
-
-function Body(title, error, message, appDir) {
-  this.title = title;
-  this.error = error;
-  this.message = message;
-  this.domain = appDir;
-  this.publicFolder = PUBLIC_FOLDER;
-}
-
+  console.log('SmartStop running on port ' + (process.env.PORT || 3000));
+});

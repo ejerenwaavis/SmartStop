@@ -4,114 +4,101 @@ $(document).ready(function(){
   $("#error-message").fadeOut(3500);
 });
 
-function reload(){
+function reload() {
   location.reload();
 }
 
-function verifyUser(e){
-  let password=prompt("Please Enter Console Password");
-  if(password){
-    $.post(domain+"/validateConsolePassword", {password:password},function(accessGranted){
-      if(accessGranted){
-        let userID = e.id;
-        let evt = $("#"+userID);
-        let body = {
-            userID:userID,
+function consoleMsg(msg) {
+  $('#js-message').text(msg).removeClass('d-none');
+  setTimeout(function () { $('#js-message').addClass('d-none'); }, 3500);
+}
+
+function consoleErr(msg) {
+  $('#js-error-message').text(msg).removeClass('d-none');
+  setTimeout(function () { $('#js-error-message').addClass('d-none'); }, 4000);
+}
+
+function verifyUser(btn) {
+  var password = prompt('Enter Console Password');
+  if (!password) return;
+  var userID = btn.id;
+  $.post(domain + '/validateConsolePassword', { password: password }, function (granted) {
+    if (!granted) { consoleErr('Invalid console password.'); return; }
+    $.post(domain + '/verifyUser', { userID: userID }, function (ok) {
+      if (ok) {
+        // Update button in place — fix the hardcoded ID bug from original
+        btn.outerHTML =
+          '<button id="' + userID + '" onclick="restrictUser(this)" class="btn-toggle-verify verified">' +
+          '<i class="fas fa-user-check me-1"></i> Restrict</button>';
+        // Update badge next to the button
+        var card = document.getElementById(userID) ? document.getElementById(userID).closest('.user-card') : null;
+        if (card) {
+          var badge = card.querySelector('.badge-unverified');
+          if (badge) { badge.className = 'badge-verified me-2'; badge.textContent = 'Verified'; }
         }
-        $.post(domain+"/verifyUser", body, function(verified){
-          if(verified){
-            evt.addClass("btn-outline-success");
-            evt.removeClass("btn-outline-danger");
-            evt[0].outerHTML = '<span id="'+userID+'" onclick="restrictUser(this)" class="verify-btn btn btn-outline-success">Verified <i id="116847574837149673093" class="fas fa-user-check"></i></span>'
-            // evt.html("Verified <i id='"+userID+"' class='fas fa-user-check'></i>");
-            $("#message").text("User has been verified");
-            $("#message").fadeIn("slow").fadeOut(3000);
-          }else{
-            $("#error-message").text("Unable to Verify User");
-            $("#error-message").fadeIn("slow").fadeOut(3000);
-          }
-        });
-      }else{
-        $("#error-message").text("Invalid Console password");
-        $("#error-message").fadeIn("slow").fadeOut(3000);
+        consoleMsg('User verified successfully.');
+      } else {
+        consoleErr('Unable to verify user.');
       }
-
-    })
-  }
+    }).fail(function () { consoleErr('Network error.'); });
+  }).fail(function () { consoleErr('Network error.'); });
 }
 
-function restrictUser(e){
-  let password=prompt("Please Enter Console Password");
-  if(password){
-    $.post(domain+"/validateConsolePassword", {password:password},function(accessGranted){
-      if(accessGranted){
-        let userID = e.id;
-        let evt = $("#"+userID);
-        let body = {
-            userID:userID,
+function restrictUser(btn) {
+  var password = prompt('Enter Console Password');
+  if (!password) return;
+  var userID = btn.id;
+  $.post(domain + '/validateConsolePassword', { password: password }, function (granted) {
+    if (!granted) { consoleErr('Invalid console password.'); return; }
+    $.post(domain + '/restrictUser', { userID: userID }, function (ok) {
+      if (ok) {
+        btn.outerHTML =
+          '<button id="' + userID + '" onclick="verifyUser(this)" class="btn-toggle-verify unverified">' +
+          '<i class="fas fa-user-times me-1"></i> Verify</button>';
+        var card = document.getElementById(userID) ? document.getElementById(userID).closest('.user-card') : null;
+        if (card) {
+          var badge = card.querySelector('.badge-verified');
+          if (badge) { badge.className = 'badge-unverified me-2'; badge.textContent = 'Pending'; }
         }
-
-        $.post(domain+"/restrictUser", body, function(restricted){
-          if(restricted){
-            evt.addClass("btn-outline-danger").removeClass("btn-outline-success");
-            evt[0].outerHTML = '<span id="'+userID+'" onclick="verifyUser(this)" class="verify-btn btn btn-outline-danger">Unverified <i id="'+userID+'" class="fas fa-user-times"></i></span>';
-            // evt.html("Unverified <i id='"+userID+"' class='fas fa-user-times'></i>");
-            $("#message").text("User has been Restricted");
-            $("#message").fadeIn("slow").fadeOut(3000);
-          }else{
-            $("#error-message").text("Unable to Restrict User");
-            $("#error-message").fadeIn("slow").fadeOut(3000);
-          }
-        });
-      }else{
-        $("#error-message").text("Invalid Console password");
-        $("#error-message").fadeIn("slow").fadeOut(3000);
+        consoleMsg('User restricted.');
+      } else {
+        consoleErr('Unable to restrict user.');
       }
-
-    })
-  }
-
-
-
+    }).fail(function () { consoleErr('Network error.'); });
+  }).fail(function () { consoleErr('Network error.'); });
 }
 
-//****************Handling Form data before submitiion************//
-function sendForm(){
-  let gateCodes = getGaceCodesData();
-  let unFormattedStreets = getAddressData();
-  let streets = [];
-
-for (street of unFormattedStreets){
-  streets.push(street.split(",",1)[0]);
-}
-  var gateCodesJSON = JSON.stringify(gateCodes);
-  var streetsJSON = JSON.stringify(streets);
-
-  $("#gate-code-JSON").val(gateCodesJSON);
-  $("#streets-JSON").val(streetsJSON);
-
-
-  if(gateCodes.length > 0 && streets.length > 0 && $('#communityName').val().trim().length > 2){
-    // alert(streets);
-    $("#add-community-form").submit();
-    // console.log("Form Submited");
-  }else{
-    $("#error-message").text("Check that all neccessarry fields are supplied");
-    $("#error-message").fadeIn(600).fadeOut(5000);
-  }
+function approveCode(id) {
+  var password = prompt('Enter Console Password');
+  if (!password) return;
+  $.post(domain + '/validateConsolePassword', { password: password }, function (granted) {
+    if (!granted) { consoleErr('Invalid console password.'); return; }
+    $.post(domain + '/approveCode', { id: id }, function (data) {
+      if (data && data.ok) {
+        var card = document.getElementById('pc-' + id);
+        if (card) card.remove();
+        consoleMsg('Code approved and added to the community.');
+      } else {
+        consoleErr('Failed to approve code.');
+      }
+    }).fail(function () { consoleErr('Network error.'); });
+  }).fail(function () { consoleErr('Network error.'); });
 }
 
-function getGaceCodesData(){
-  const tempArrays = [];
-  const gateCodeDescriptions = $('.gate-code-description');
-  const gateCodes = $('.gate-code');
-  for(i=0; i<gateCodeDescriptions.length; i++){
-    if(gateCodeDescriptions[i].value.trim() && gateCodes[i].value.trim()){
-      tempArrays.push(new GateCode(gateCodeDescriptions[i].value, gateCodes[i].value.toString() ));
-    }
-  }
-  return tempArrays;
+function rejectCode(id) {
+  var password = prompt('Enter Console Password');
+  if (!password) return;
+  $.post(domain + '/validateConsolePassword', { password: password }, function (granted) {
+    if (!granted) { consoleErr('Invalid console password.'); return; }
+    $.post(domain + '/rejectCode', { id: id }, function (data) {
+      if (data && data.ok) {
+        var card = document.getElementById('pc-' + id);
+        if (card) card.remove();
+        consoleMsg('Submission rejected and removed.');
+      } else {
+        consoleErr('Failed to reject submission.');
+      }
+    }).fail(function () { consoleErr('Network error.'); });
+  }).fail(function () { consoleErr('Network error.'); });
 }
 
-
-/******************Handling adding multiple streets to comunity*****************************/

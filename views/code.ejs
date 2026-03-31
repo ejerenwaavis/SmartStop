@@ -1,123 +1,139 @@
-<%- include('partials/header'); %>
+﻿<%- include('partials/header') %>
 
-  <p class="d-none mb-0" id="coord-x"></p>
-  <p class="d-none mb-0" id="coord-y"></p>
+<div class="d-none" id="coord-x"></div>
+<div class="d-none" id="coord-y"></div>
 
+<!-- Search bar -->
+<div class="search-wrapper mb-4">
+  <i class="fas fa-search search-icon-prefix"></i>
+  <input autocomplete="off" type="text" onkeyup="find(this)" class="search-field"
+    id="search-field" placeholder="Search community or street&hellip;">
+  <div class="search-results" id="resultList"></div>
+</div>
 
+<!-- Community & gate codes display -->
+<div id="defaultInfo">
 
-  <div class="dropdown mt-5">
-    <div class="" id="searchBarContainer" data-toggle="dropdown" aria-haspopup="false" aria-expanded="false">
-      <div class="input-group col-12 align-self-center">
-        <input autocomplete="off" type="text" onkeyup="find(this)" class="search-field form-control" id="search-field"
-          placeholder="Search Community or Street" aria-label="Street Name" aria-describedby="button-addon2">
-        <button onclick="search()" class="btn search-icon btn-outline-secondary" type="button" id="button-addon2"><i
-            class="fas fa-search"></i></button>
+  <!-- Community info card -->
+  <div id="communityDescription">
+    <div class="community-card">
+      <p class="community-name">
+        <i class="fas fa-map-marker-alt me-1" style="color:var(--clr-accent)"></i>
+        <% if (community.communityName === 'Unregistered') { %>
+          <%= community.streets[0] %>
+        <% } else { %>
+          <%= community.communityName %> Community
+        <% } %>
+      </p>
+      <div class="streets-row">
+        <% for (var street of community.streets) { %>
+          <span class="street-badge"><i class="fas fa-road me-1"></i><%= street %></span>
+        <% } %>
       </div>
-    </div>
-
-    <div class="container">
-      <div class="row ">
-        <div class="dropdown-menu col-12 py-2 px-1 "   id="resultList" aria-labelledby="searchResults">
-          <a class="dropdown-item text-center "> -- <em> Nothing to look for yet -- </em></a>
-
-        </div>
-      </div>
+      <% if (typeof location !== 'undefined' && location && location.city) { %>
+        <p class="mt-2 mb-0" style="font-size:.78rem;color:var(--clr-muted)">
+          <i class="fas fa-city me-1"></i><%= location.city %><% if(location.stateCode){ %>, <%= location.stateCode %><% } %>
+        </p>
+      <% } %>
     </div>
   </div>
 
-
-
-  <div id="defaultInfo">
-    <div id="communityDescription">
-
-      <div class="mt-5">
-        <p class="mb-0"> <em><b>
-          <%= community.communityName %>
-        </b> Community</em></p>
-        <p class="display-5 mb-4 " id="gateCode-description">
-          <i>Streets inside: </i>
-          <% for(street of community.streets){%>
-            <%=street+", " %>
-            <% } %>
+  <!-- Gate codes -->
+  <% if (community.gateCodes && community.gateCodes.length > 0) { %>
+    <p class="gate-codes-section-label"><i class="fas fa-key me-1"></i> Gate Codes</p>
+    <div id="defaultCode">
+      <% for (var gateCode of community.gateCodes) { %>
+        <div class="gate-code-card">
+          <p class="gate-code-label"><%= gateCode.description || 'Gate Code' %></p>
+          <p class="gate-code-number">
+            <%= (gateCode.code.toString().length === 4 && gateCode.code.toString() !== '0000') ? '#' : '' %><%= gateCode.code %>
           </p>
         </div>
-  </div> 
-  <!-- this div clsing migh be a TYPO  -->
-  <div class=" mt-4">
-            <div id="defaultCode"> 
-              <% for (gateCode of community.gateCodes){ %>
-                <p class="mb-0 mt-3">
-                  <%=gateCode.description%>
-                </p>
-                <h1 class="display-2 font-weight-bold mt-0 mb-0" id="label">
-                  <%= (gateCode.code.toString().length==4 && gateCode.code.toString() !=="0000" )? "#" : "" ;%>
-                    <%= gateCode.code %>
-                </h1>
-                <% } %>
-            </div>
-            <div id="serchedCode">
-                  
-            </div>
+      <% } %>
     </div>
-  </div>
+  <% } else { %>
+    <% if (community.communityName === 'Unregistered') { %>
+      <div class="no-codes-card">
+        <div class="no-codes-icon-wrap"><i class="fas fa-key"></i></div>
+        <p class="no-codes-street">Street detected, no codes on file</p>
+        <p class="no-codes-label">Be the first to submit a code for <strong><%= community.streets[0] %></strong></p>
+        <button type="button" class="btn-suggest-code" onclick="toggleSuggestForm()">
+          <i class="fas fa-plus me-1"></i> Suggest a Code
+        </button>
+      </div>
+      <div id="suggest-form" class="suggest-form d-none">
+        <p class="suggest-form-title"><i class="fas fa-key me-1"></i> Submit a Code for Review</p>
+        <p class="suggest-form-hint">Codes are reviewed by an admin before going live.</p>
+        <input type="hidden" id="suggest-street" value="<%= community.streets[0] %>">
+        <input type="hidden" id="suggest-city" value="<%= location && location.city ? location.city : '' %>">
+        <input type="hidden" id="suggest-state" value="<%= location && location.stateCode ? location.stateCode : '' %>">
+        <input type="hidden" id="suggest-postal" value="<%= location && location.postalCode ? location.postalCode : '' %>">
+        <div class="d-flex gap-2 mb-2">
+          <input type="text" id="suggest-description" class="form-control" placeholder="Description (e.g. Main Gate)">
+          <input type="text" id="suggest-code-input" class="form-control" placeholder="Code" style="max-width:130px">
+        </div>
+        <button type="button" class="btn-primary-block" id="suggest-submit-btn" onclick="submitSuggestedCode()">
+          <i class="fas fa-paper-plane me-1"></i> Submit for Review
+        </button>
+        <p class="d-none ss-alert ss-alert-danger mt-2" id="suggest-error"></p>
+        <p class="d-none ss-alert ss-alert-success mt-2" id="suggest-success"></p>
+      </div>
+    <% } else { %>
+      <div class="gate-code-card" style="color:var(--clr-muted);text-align:center;padding:2rem">
+        <i class="fas fa-key fa-2x mb-2 d-block" style="opacity:.3"></i>
+        <p class="mb-0" style="font-size:.875rem">No gate codes on record for this community</p>
+      </div>
+    <% } %>
+  <% } %>
 
-  <!-- // ************ uncomment this if any change in appearance -->
-  <div class="mt-1 mb-1" id="adminStuff">
-    <form hidden class="d-none" id="geoCodeForm" action="<%= body.domain %>/adminInclude" method="post">
-      <textarea name="locationJSONString" rows="8" cols="30"><%= JSON.stringify(location) %></textarea>
-    </form>
+  <!-- Search result overlay (populated by search.js) -->
+  <div id="searchedCode"></div>
 
-    <div id="adminInclude" class="d-none">
-      <% if(community.communityName==="Unregistered" ){ %>
-        <p class="mb-1">Are you an admin?</p>
-        <!-- <span " class="btn btn-primary btn-xs">Include community </span> -->
-        
-        
-        <!-- Button trigger modal -->
-        <button type="button" class="btn btn-primary" onclick="focusOnAdminPass()" data-bs-toggle="modal"
-        data-bs-target="#staticBackdrop">
-        Include community
+  <!-- Admin: unregistered community handler -->
+  <% if (community.communityName === 'Unregistered') { %>
+    <div id="adminInclude" class="unregistered-banner">
+      <p class="unregistered-title"><i class="fas fa-tools me-1"></i> Admin: Register This Address</p>
+      <p class="unregistered-text">Formally add this street with a community name and full details.</p>
+      <button type="button" class="btn-accent" onclick="focusOnAdminPass()"
+        data-bs-toggle="modal" data-bs-target="#adminPassModal">
+        <i class="fas fa-plus"></i> Include Community
       </button>
     </div>
+    <div id="adminStuff">
+      <form class="d-none" id="geoCodeForm" action="<%= body.domain %>/adminInclude" method="post">
+        <textarea name="locationJSONString"><%= JSON.stringify(location) %></textarea>
+      </form>
+    </div>
+  <% } %>
 
-      <!-- Modal -->
-      <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-        aria-labelledby="staticBackdropLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h6 class="modal-title" id="staticBackdropLabel">Admin privilage required</h6>
-              <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close"><span
-                  aria-hidden="true">&times;</span></button>
-            </div>
-            <form id="accessForm">
-              <div class="modal-body">
-                <p class="text-danger" id="error-message"> </p>
-                <div class="mb-3">
-                  <!-- <label for="recipient-name" class="col-form-label">Recipient:</label> -->
-                  <input type="password" class="form-control" placeholder="Type your Admin Password " id="adminPass">
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="submit" class="btn btn-primary">Proceed</button>
-              </div>
-            </form>
-          </div>
-        </div>
+</div>
+
+<!-- Admin password modal -->
+<div class="modal fade" id="adminPassModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title fw-bold">Admin Access Required</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-
-
-      <% } %>
+      <form id="accessForm">
+        <div class="modal-body">
+          <p class="text-danger small mb-2" id="error-message"></p>
+          <input type="password" class="form-control" placeholder="Admin password" id="adminPass" autocomplete="current-password">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-warning fw-semibold">Continue</button>
+        </div>
+      </form>
+    </div>
   </div>
+</div>
 
-  </div>
-  <!-- end of defaultInfo -->
-
-  <a href="<%= body.domain %>/" class="btn btn-danger mt-4">
-    <i class="fas fa-1x fa-sync"></i> REFRESH
+<div class="mt-4 text-center">
+  <a href="<%= body.domain %>/" class="btn btn-sm btn-outline-secondary">
+    <i class="fas fa-sync me-1"></i> Re-locate
   </a>
+</div>
 
-
-
-  <%- include('partials/footer'); %>
+<%- include('partials/footer') %>

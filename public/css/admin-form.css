@@ -20,3 +20,63 @@ body{
 .pointer{
   cursor: pointer;
 }
+
+/* ── Street autocomplete dropdown ─────────────────── */
+.street-ac-wrapper {
+  position: relative;
+}
+
+.street-ac-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,.12);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.street-ac-item {
+  padding: .55rem .85rem;
+  font-size: .85rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background .12s;
+}
+
+.street-ac-item:last-child {
+  border-bottom: none;
+}
+
+.street-ac-item:hover,
+.street-ac-item.ac-active {
+  background: var(--clr-accent, #f5a623);
+  color: #fff;
+}
+
+/* ── Add Street button ───────────────────────────── */
+.btn-add-street {
+  flex-shrink: 0;
+  padding: .42rem .9rem;
+  font-size: .8rem;
+  font-weight: 600;
+  background: #e9f5ee;
+  color: #1a7a40;
+  border: 1px solid #b3d9c0;
+  border-radius: .5rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.btn-add-street:hover {
+  background: #1a7a40;
+  color: #fff;
+}

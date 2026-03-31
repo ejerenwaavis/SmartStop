@@ -1,96 +1,173 @@
 
 const domain = $('#domain').attr('domain');
-// console.log(domain);
 
-$("document").ready(function(){
-  $("#accessForm").on("submit", function(e){
-     e.preventDefault();
-      includeCommunity();
+$(document).ready(function () {
+  // Show admin include section only when location payload is present
+  var payload = ($('#locationJSONString').val() || $('#geoCodeForm textarea[name="locationJSONString"]').val() || '').trim();
+  if ($('#adminInclude').length && payload) {
+    $('#adminInclude').removeClass('d-none');
+  }
+
+  // Admin include form submission via modal
+  $('#accessForm').on('submit', function (e) {
+    e.preventDefault();
+    includeCommunity();
   });
 });
 
-let x = 0;
-let y = 0;
-let geoPosition = 0;
+// ── Geolocation ──────────────────────────────────────
+const hasLocateError = $('.ss-alert-danger').length > 0;
+const autoLocateKey = 'smartstop:auto-locate-ran';
 
+const getGeocode = new Promise(function (resolve, reject) {
+  if (!navigator.geolocation) {
+    return reject(new Error('Geolocation not supported'));
+  }
+  navigator.geolocation.getCurrentPosition(resolve, reject, {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 0
+  });
+});
 
-function success(position) {
-  geoPosition = position;
-  // console.log(position);
-  x = position.coords.latitude;
-  y = position.coords.longitude;
-  $('#coord-x').text("Lat: " + x);
-  $('#coord-y').text("Lon: " + y);
-  $("#position").val(x + "," + y);
+const getCurrentStreetName = new Promise(function (resolve, reject) {
+  getGeocode
+    .then(function (position) {
+      const coords = position.coords.latitude + ',' + position.coords.longitude;
+      $.post(domain + '/resourceStreet', { position: coords }, function (result) {
+        resolve(result || '');
+      }).fail(function () { resolve(''); });
+    })
+    .catch(function (err) { reject(err); });
+});
+
+function onGeoSuccess(position) {
+  const x = position.coords.latitude;
+  const y = position.coords.longitude;
+  sessionStorage.setItem(autoLocateKey, '1');
+  $('#coord-x').text('Lat: ' + x);
+  $('#coord-y').text('Lon: ' + y);
+  $('#position').val(x + ',' + y);
   $('#location-form').submit();
 }
 
-
-function error(error) {
-  // console.log(error);
-  if (error.message === "User denied Geolocation") {
-    $("#gpsError").text("Hmmm... It seems your location is turned off, try turning it on and then refresh the page.");
-    console.log("User denied access to GeoLocation");
+function onGeoError(err) {
+  sessionStorage.setItem(autoLocateKey, '1');
+  $('#locating-state').hide();
+  var msg = 'Location access is off. Turn it on and refresh, or search manually above.';
+  if (err && err.code === 1) {
+    msg = 'Location access denied. Search a community manually above.';
   }
+  $('#gpsError').text(msg);
 }
 
-
-const getGecode = new Promise(function(resolve,reject){
-  navigator.geolocation.getCurrentPosition(function (position) {
-    resolve(position);
-  }, function(err){
-    reject(err);
-  },{
-  enableHighAccuracy: true,
-  timeout: 5000,
-  maximumAge: 0
-});
-})
-
-const getCurrentStreetName = new Promise(function (resolve,reject){
-  const url = domain+'/resourceStreet';
-  getGecode.then(function(position){
-  let coords =   position.coords.latitude +","+ position.coords.longitude;
-  const data = { position: coords }
-    $.post(url,data,function(result){resolve(result);});
-  }).catch(error)
-})
-
-
-
-/**************************  HAndling Admin Privilage Form****************************************/
-function includeCommunity(){
-  var adminPass = $("#adminPass").val().trim();
-
-  if (adminPass) {
-      $.post(domain+"/validatePassword", {password:adminPass},function(data){
-        if(data === true){
-          $("#geoCodeForm").submit();
-        }else{
-            focusOnAdminPass();
-            $("#error-message").text("Access Denied - Invalid Password");
-            $("#error-message").fadeIn("slow").fadeOut(3000);
-          }
-
-      });
-  }else{
-    $("#error-message").text("Access Denied - Password cannot be empty");
-    $("#error-message").fadeIn("slow").fadeOut(3000);
-    focusOnAdminPass();
+function runAutoLocateOnce() {
+  var alreadyRan = sessionStorage.getItem(autoLocateKey) === '1';
+  if (hasLocateError || alreadyRan) {
+    $('#locating-state').hide();
+    if (hasLocateError) {
+      $('#gpsError').text('Automatic location lookup failed. Search manually above.');
+    }
+    return;
   }
+  getGeocode.then(onGeoSuccess).catch(onGeoError);
 }
 
+runAutoLocateOnce();
 
-function submitGeoCodeForm(){
-  console.log("submitting geocode form");
-  $("#geoCodeForm").submit();
-}
+// ── Admin Include (password modal) ───────────────────
+function includeCommunity() {
+  var payload = ($('#locationJSONString').val() || $('#geoCodeForm textarea[name="locationJSONString"]').val() || '').trim();
+  if (!payload) {
+    $('#error-message').text('No location data found. Please use Re-locate first.').show();
+    return;
+  }
 
-function focusOnAdminPass(){
-  console.log("include clicked");
-  $('#staticBackdrop').on('shown.bs.modal', function () {
-      $('#adminPass').focus();
+  var adminPass = $('#adminPass').val().trim();
+  if (!adminPass) {
+    $('#error-message').text('Password cannot be empty').show();
+    return;
+  }
+  $.post(domain + '/validatePassword', { password: adminPass }, function (granted) {
+    if (granted === true) {
+      $('#geoCodeForm').submit();
+    } else {
+      $('#error-message').text('Access Denied – Invalid Password').show();
+      $('#adminPass').val('').focus();
+    }
+  }).fail(function () {
+    $('#error-message').text('Network error. Please try again.').show();
   });
 }
 
-getGecode.then(success).catch(error);
+function submitGeoCodeForm() {
+  var payload = ($('#locationJSONString').val() || $('#geoCodeForm textarea[name="locationJSONString"]').val() || '').trim();
+  if (!payload) {
+    if ($('#error-message').length) {
+      $('#error-message').text('No location data found. Please use Re-locate first.').show();
+    }
+    return;
+  }
+  $('#geoCodeForm').submit();
+}
+
+function focusOnAdminPass() {
+  var modal = document.getElementById('adminPassModal');
+  if (modal) {
+    modal.addEventListener('shown.bs.modal', function handler() {
+      document.getElementById('adminPass').focus();
+      modal.removeEventListener('shown.bs.modal', handler);
+    });
+  }
+}
+
+// ── User code suggestion (unregistered community) ────
+function toggleSuggestForm() {
+  var form = document.getElementById('suggest-form');
+  if (!form) return;
+  if (form.classList.contains('d-none')) {
+    form.classList.remove('d-none');
+    setTimeout(function () {
+      var desc = document.getElementById('suggest-description');
+      if (desc) desc.focus();
+    }, 50);
+  } else {
+    form.classList.add('d-none');
+  }
+}
+
+function submitSuggestedCode() {
+  var street = ($('#suggest-street').val() || '').trim();
+  var city   = ($('#suggest-city').val() || '').trim();
+  var state  = ($('#suggest-state').val() || '').trim();
+  var postal = ($('#suggest-postal').val() || '').trim();
+  var desc   = ($('#suggest-description').val() || '').trim();
+  var code   = ($('#suggest-code-input').val() || '').trim();
+  var $err   = $('#suggest-error');
+  var $ok    = $('#suggest-success');
+  $err.addClass('d-none');
+  $ok.addClass('d-none');
+
+  if (!desc) { $err.text('Please enter a description (e.g. Main Gate)').removeClass('d-none'); return; }
+  if (!code) { $err.text('Please enter the gate code').removeClass('d-none'); return; }
+
+  var $btn = $('#suggest-submit-btn');
+  $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Submitting\u2026');
+
+  $.post(domain + '/suggestCode',
+    { street: street, city: city, stateCode: state, postalCode: postal, description: desc, code: code },
+    function (result) {
+      $btn.prop('disabled', false).html('<i class="fas fa-paper-plane me-1"></i> Submit for Review');
+      if (result && result.ok) {
+        $ok.text('Code submitted! An admin will review it before it goes live.').removeClass('d-none');
+        $('#suggest-description').val('');
+        $('#suggest-code-input').val('');
+      } else {
+        $err.text('Submission failed. Please try again.').removeClass('d-none');
+      }
+    }
+  ).fail(function () {
+    $btn.prop('disabled', false).html('<i class="fas fa-paper-plane me-1"></i> Submit for Review');
+    $err.text('Network error. Please try again.').removeClass('d-none');
+  });
+}

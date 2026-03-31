@@ -1,220 +1,280 @@
-$(document).ready(function(){
-  $("#error-message").fadeOut(3500);
+﻿// ── AdminForm.js ─────────────────────────────────────
+// Manages the add-community admin form: gate codes, street tags, discovery
+// NOTE: `domain` is declared by locate.js which is loaded first via footerAdmin.ejs
+
+$(document).ready(function () {
+  var $err = $('#js-error-message');
+  if ($err.length) setTimeout(function () { $err.addClass('d-none'); }, 4000);
+  var $msg = $('.ss-alert-success');
+  if ($msg.length) setTimeout(function () { $msg.fadeOut(600); }, 4000);
 });
 
-let autocomplete;
+// ── Street tag system ─────────────────────────────────
+var addedStreets = [];
 
+function renderStreetTags() {
+  var container = $('#street-tags-container');
+  var hidden    = $('#street-hidden-inputs');
+  container.html('');
+  hidden.html('');
 
-function generateEmptyTextField(){
-  const addressField =
-  '<div class="input-group mb-2"> <input type="text" autofocus value="" class="mb-2 form-control street-address" id="autocomplete-address" placeholder="Street Addresses in the community">'+
-    '<div class="input-group-append mb-2">' +
-      '<button class="btn btn-outline-warning" onclick="addAddressField()" type="button" id="addAddress"><i class="fas fa-plus"></i></button>'+
-    '</div>'+
-  '</div>' +
-'';
-  return addressField;
-}
-
-function generateTextField(value){
-  const addressField =
-  '<div class="input-group mb-2">'+
-    '<input type="text" value="'+value+'" class="mb-2 form-control street-address" id="'+value+'" placeholder="Street Addresses in the community">'+
-  '</div>' +
-'';
-  return addressField;
-}
-
-function addAddressField(){
-  getCurrentStreetName.then(function(newStreetName){
-    const tempArrays = getAddressData();
-    if(!(tempArrays.includes(newStreetName))){
-      tempArrays.push(newStreetName);
-    }
-    let fieldsHtml = constructAddressFieldHTML(tempArrays);
-    $('.street-address-container').html(fieldsHtml);
-    initAutocomplete();
-    $("#autocomplete-address").focus();
+  addedStreets.forEach(function (street, idx) {
+    container.append(
+      '<span class="street-tag">' + street +
+      '<button type="button" class="street-tag-remove" onclick="removeStreet(' + idx + ')" aria-label="Remove">' +
+      '<i class="fas fa-times"></i></button></span>'
+    );
+    hidden.append('<input type="hidden" class="street-address" value="' + street.replace(/"/g, '&quot;') + '">');
   });
 }
 
-function constructAddressFieldHTML(array){
-  let htmlString = "";
-  for(i=0; i < array.length; i++){
-    htmlString = htmlString + generateTextField(array[i]);
-  }
-  htmlString = htmlString + generateEmptyTextField();
-  return htmlString;
+function removeStreet(idx) {
+  addedStreets.splice(idx, 1);
+  renderStreetTags();
 }
 
+function addStreetManually(name) {
+  name = (name || '').trim().split(',')[0].trim(); // drop any ", City" suffix
+  if (!name) return false;
+  if (addedStreets.includes(name)) {
+    showJsError('Already added: ' + name);
+    return false;
+  }
+  addedStreets.push(name);
+  renderStreetTags();
+  return true;
+}
 
+// ── Add street from the input field ──────────────────
+function addCurrentStreet() {
+  var val = $('#discover-street-input').val().trim();
+  if (!val) { showJsError('Enter a street name first.'); return; }
+  if (addStreetManually(val)) {
+    $('#discover-street-input').val('').focus();
+    closeStreetAc();
+  }
+}
 
+// ── Street autocomplete ───────────────────────────────
+var acTimer = null;
 
-//*******************Gate Codes Input Field****************//
+function streetInputChange(input) {
+  var q = (input.value || '').trim();
+  clearTimeout(acTimer);
+  if (q.split(',')[0].trim().length < 2) { closeStreetAc(); return; }
+  acTimer = setTimeout(function () { fetchStreetSuggestions(q); }, 150);
+}
 
-function GateCode(description, code){
+function streetInputKeyDown(e) {
+  var dropdown  = document.getElementById('street-ac-dropdown');
+  var items     = dropdown ? Array.prototype.slice.call(dropdown.querySelectorAll('.street-ac-item')) : [];
+  var activeIdx = items.findIndex(function (el) { return el.classList.contains('ac-active'); });
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (activeIdx >= 0) items[activeIdx].classList.remove('ac-active');
+    var next = activeIdx < items.length - 1 ? activeIdx + 1 : 0;
+    if (items[next]) items[next].classList.add('ac-active');
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (activeIdx >= 0) items[activeIdx].classList.remove('ac-active');
+    var prev = activeIdx > 0 ? activeIdx - 1 : items.length - 1;
+    if (items[prev]) items[prev].classList.add('ac-active');
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (activeIdx >= 0 && items[activeIdx]) {
+      var d = items[activeIdx].dataset;
+      selectStreetSuggestion(d.street, d.city, d.state);
+    } else {
+      addCurrentStreet();
+    }
+  } else if (e.key === 'Escape') {
+    closeStreetAc();
+  }
+}
+
+function fetchStreetSuggestions(q) {
+  var streetPart = q.split(',')[0].trim(); // only the street name, not any city the user typed
+  var city = $('#city').val().trim();
+  var url  = domain + '/streetSuggest?q=' + encodeURIComponent(streetPart) + (city ? '&city=' + encodeURIComponent(city) : '');
+  $.getJSON(url, function (results) {
+    var $drop = $('#street-ac-dropdown');
+    $drop.html('').addClass('d-none');
+    if (!results || !results.length) return;
+    results.forEach(function (r) {
+      var label = r.street + (r.city ? ', ' + r.city : '') + (r.state ? ', ' + r.state : '');
+      $('<div class="street-ac-item"></div>')
+        .text(label)
+        .attr({ 'data-street': r.street, 'data-city': r.city || '', 'data-state': r.state || '' })
+        .on('mousedown', function (e) {
+          e.preventDefault(); // prevent blur before click
+          selectStreetSuggestion(r.street, r.city, r.state);
+        })
+        .appendTo($drop);
+    });
+    $drop.removeClass('d-none');
+  }).fail(function () { closeStreetAc(); });
+}
+
+function selectStreetSuggestion(street, city, state) {
+  if (city  && !$('#city').val().trim())      $('#city').val(city);
+  if (state && !$('#stateCode').val().trim()) $('#stateCode').val(state);
+  closeStreetAc();
+  if (addStreetManually(street)) {
+    $('#discover-street-input').val('').focus();
+  } else {
+    $('#discover-street-input').val(street);
+  }
+}
+
+function closeStreetAc() {
+  $('#street-ac-dropdown').addClass('d-none').html('');
+}
+
+$(document).on('click', function (e) {
+  if (!$(e.target).closest('#street-ac-wrapper').length) closeStreetAc();
+});
+
+// ── Discover streets via Overpass ─────────────────────
+function discoverStreets() {
+  var streetName = $('#discover-street-input').val().trim();
+  var city       = $('#city').val().trim();
+  var state      = $('#stateCode').val().trim();
+
+  if (!streetName) {
+    showJsError('Enter a street name before discovering.');
+    return;
+  }
+  if (!city) {
+    showJsError('Enter the city name first.');
+    return;
+  }
+
+  var btn = $('#discover-btn');
+  btn.prop('disabled', true).html('<span class="discover-spinner"></span> Searching&hellip;');
+  $('#discovery-results').addClass('d-none');
+
+  $.post(domain + '/discoverStreets', { streetName: streetName, city: city, state: state }, function (data) {
+    btn.prop('disabled', false).html('<i class="fas fa-magic"></i> Discover');
+
+    if (data.streets && data.streets.length > 0) {
+      if (data.city  && !$('#city').val().trim())      $('#city').val(data.city);
+      if (data.state && !$('#stateCode').val().trim()) $('#stateCode').val(data.state);
+
+      var items = $('#discovery-items');
+      items.html('');
+      data.streets.forEach(function (street) {
+        var alreadyAdded = addedStreets.includes(street);
+        items.append(
+          '<label class="discovery-item">' +
+          '<input type="checkbox" ' + (alreadyAdded ? 'checked disabled' : 'checked') + ' value="' + street.replace(/"/g, '&quot;') + '">' +
+          street + (alreadyAdded ? ' <em style="font-size:.7rem;color:var(--clr-muted)">(added)</em>' : '') +
+          '</label>'
+        );
+      });
+      $('#discovery-results').removeClass('d-none');
+    } else {
+      showJsError('No streets found nearby. Try a different street name or check the city/state.');
+    }
+  }).fail(function () {
+    btn.prop('disabled', false).html('<i class="fas fa-magic"></i> Discover');
+    showJsError('Network error during discovery. Please try again.');
+  });
+}
+
+function addDiscoveredStreets() {
+  var added = 0;
+  $('#discovery-items input[type=checkbox]:checked:not(:disabled)').each(function () {
+    var street = $(this).val();
+    if (!addedStreets.includes(street)) {
+      addedStreets.push(street);
+      added++;
+    }
+  });
+  renderStreetTags();
+  $('#discovery-results').addClass('d-none');
+  if (added > 0) {
+    showJsMessage(added + ' street' + (added === 1 ? '' : 's') + ' added.');
+  }
+}
+
+// ── Gate Code fields ──────────────────────────────────
+function GateCode(description, code) {
   this.description = description;
   this.code = code;
 }
 
-function generateEmptyGateCodeField(){
-  const codeField = ''+
-  '<div class="input-group mb-2 col-6">'+
-    '<input type="text" autofocus class="form-control gate-code-description" placeholder="Gate Code Description" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">'+
-  '</div>'+
-  '<div class="input-group mb-2 col-6">'+
-    '<input type="text" class="form-control gate-code" placeholder="Gate Code #" value="" aria-label="Example text with button addon" aria-describedby="button-addon1">'+
-    '<div class="input-group-append">'+
-      '<button class="btn btn-outline-warning" type="button" onclick="addGateCodeField()" id="button-addon1"><i class="fas fa-plus"></i></button>'+
-    '</div>'+
-  '</div>'+
-'';
-  return codeField;
+function addGateCodeField() {
+  var codes = getGateCodesData();
+  var html  = '';
+  codes.forEach(function (gc) {
+    html += buildGateCodeFieldHtml(gc.description, gc.code);
+  });
+  html += buildGateCodeFieldHtml('', '');
+  $('#gate-code-container').html(html);
 }
 
-function generateGateCodeField(gateCode){
-  const codeField =''+
-  '<div class="input-group mb-2 col-6">'+
-    '<input type="text" class="form-control gate-code-description" placeholder="Gate Code Description" value="'+gateCode.description+'" aria-label="Example text with button addon" aria-describedby="button-addon1">'+
-  '</div>'+
-  '<div class="input-group mb-2 col-6">'+
-    '<input type="text" class="form-control gate-code" placeholder="Gate Code #" value="'+gateCode.code+'" aria-label="Example text with button addon" aria-describedby="button-addon1">'+
-  '</div>'+
-  '';
-  return codeField;
+function buildGateCodeFieldHtml(desc, code) {
+  return '<div class="field-pair">' +
+    '<input type="text" class="form-control gate-code-description" placeholder="Description (e.g. Main Gate)" value="' + desc.replace(/"/g, '&quot;') + '">' +
+    '<input type="text" class="form-control gate-code" placeholder="Code" value="' + code.replace(/"/g, '&quot;') + '" style="max-width:110px">' +
+    '</div>';
 }
 
-function addGateCodeField(){
-  const tempArrays = getGaceCodesData(); //returns an array of gate code objects
-  let gateCodeFieldsHtml = constructGateCodeFieldHTML(tempArrays);
-  $('.gate-code-container').html(gateCodeFieldsHtml);
-}
-
-function constructGateCodeFieldHTML(array){
-  let htmlString = "";
-  for(i=0; i < array.length; i++){
-    htmlString = htmlString + generateGateCodeField(array[i]);
+function getGateCodesData() {
+  var codes = [];
+  var descs = $('.gate-code-description');
+  var vals  = $('.gate-code');
+  for (var i = 0; i < descs.length; i++) {
+    var d = descs[i].value.trim();
+    var c = vals[i].value.trim();
+    if (d && c) codes.push(new GateCode(d, c));
   }
-  htmlString = htmlString + generateEmptyGateCodeField();
-  return htmlString;
+  return codes;
 }
 
+// ── Form submission ───────────────────────────────────
+function sendForm() {
+  var gateCodes = getGateCodesData();
+  var streets   = addedStreets.slice();
 
-
-//****************Handling Form data before submitiion************//
-function sendForm(){
-  let gateCodes = getGaceCodesData();
-  let unFormattedStreets = getAddressData();
-  let streets = [];
-
-for (street of unFormattedStreets){
-  streets.push(street.split(",",1)[0]);
-}
-  var gateCodesJSON = JSON.stringify(gateCodes);
-  var streetsJSON = JSON.stringify(streets);
-
-  $("#gate-code-JSON").val(gateCodesJSON);
-  $("#streets-JSON").val(streetsJSON);
-
-
-  if(gateCodes.length > 0 && streets.length > 0 && $('#communityName').val().trim().length > 2){
-    // alert(streets);
-    $("#add-community-form").submit();
-    // console.log("Form Submited");
-  }else{
-    $("#error-message").text("Check that all neccessarry fields are supplied");
-    $("#error-message").fadeIn(600).fadeOut(5000);
-  }
-}
-
-function getGaceCodesData(){
-  const tempArrays = [];
-  const gateCodeDescriptions = $('.gate-code-description');
-  const gateCodes = $('.gate-code');
-  for(i=0; i<gateCodeDescriptions.length; i++){
-    if(gateCodeDescriptions[i].value.trim() && gateCodes[i].value.trim()){
-      tempArrays.push(new GateCode(gateCodeDescriptions[i].value, gateCodes[i].value.toString() ));
-    }
-  }
-  return tempArrays;
-}
-
-function getAddressData(){
-  const tempArrays = [];
-  const streetAdresses = $('.street-address');
-  let warningShown = false;
-
-  for(address of streetAdresses){
-    let newAddress = address.value.trim();
-    newAddress = newAddress.split(",",1)[0];
-
-    if(newAddress){
-      // console.log(newAddress);
-      let includes = (tempArrays.includes(newAddress));
-      if(!includes){
-        tempArrays.push(newAddress);
-        // console.log(includes + ": Added " + tempArrays);
-      }else{
-        if(!warningShown){
-          $('#error-message').text("AddAddress: Cannot add duplicate street name");
-          $('#error-message').fadeIn().fadeOut(3000);
-          // console.log("Street Already added");
-          warningShown = true;
-        }
-      }
-      // console.log();
-    }else{
-      $('#error-message').text("Street name cannot be empty");
-      $('#error-message').fadeIn().fadeOut(3000);
-      // console.log("Empty Street");
-    }
+  // Also pick up any hidden street inputs rendered by renderStreetTags
+  if (streets.length === 0) {
+    $('.street-address').each(function () {
+      var v = $(this).val().trim();
+      if (v && !streets.includes(v)) streets.push(v);
+    });
   }
 
-  // console.log("GetAddress => " + tempArrays);
-  return tempArrays;
-}
+  var communityName = $('#communityName').val().trim();
 
-
-/************************** Address Auto complete ************************************************/
-
-function initAutocomplete(){
-  let inputs = $('.street-address');
-  const options = {
-    types: ['address']
-  };
-
-
-  for(input of inputs){
-    autocomplete = new google.maps.places.Autocomplete(input, options);
-    autocomplete.setFields(["address_components"]);
-    autocomplete.addListener("place_changed", fillAddress);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(function(position) {
-        var geolocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        var circle = new google.maps.Circle(
-            {center: geolocation, radius: position.coords.accuracy});
-        autocomplete.setBounds(circle.getBounds());
-      });
-    }
+  if (communityName.length < 2) {
+    showJsError('Community name must be at least 2 characters.');
+    return;
   }
-}
-
-function fillAddress(){
-  let place = autocomplete.getPlace();
-  // console.log(place);
-  if(place){
-    let streetName = place.address_components[0].short_name;
-    let city = place.address_components[1].short_name;
-    let tempArrays = getAddressData();
-
-    $('#autocomplete-address').val(streetName);
-    $('#city').val(city);
-    $("#addAddress").focus();
+  if (streets.length === 0) {
+    showJsError('Add at least one street.');
+    return;
+  }
+  if (gateCodes.length === 0) {
+    showJsError('Add at least one gate code.');
+    return;
   }
 
+  $('#gate-code-JSON').val(JSON.stringify(gateCodes));
+  $('#streets-JSON').val(JSON.stringify(streets));
+  $('#add-community-form').submit();
 }
 
-/******************Handling adding multiple streets to comunity*****************************/
+// ── Utility ───────────────────────────────────────────
+function showJsError(msg) {
+  $('#js-error-message').text(msg).removeClass('d-none');
+  setTimeout(function () { $('#js-error-message').addClass('d-none'); }, 5000);
+}
+
+function showJsMessage(msg) {
+  var $m = $('#js-message');
+  if (!$m.length) return;
+  $m.text(msg).removeClass('d-none');
+  setTimeout(function () { $m.addClass('d-none'); }, 3000);
+}
