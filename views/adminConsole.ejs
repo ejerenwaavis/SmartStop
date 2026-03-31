@@ -1,33 +1,88 @@
-<%- include('partials/header'); %>
+<%- include('partials/header') %>
 
-<h3 class="display-5 mt-5 mb-5">Admin Console</h3>
-<p id="error-message" class="text-danger display-5 mt-5 mb-5"><%=body.error%></p>
-<p id="message" class="text-success display-5 mt-5 mb-5"><%=body.message%></p>
-<div class="container">
-  <ul class="list-group">
-      <%for(user of users){%>
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <%=user.username%>
-          <%if(user.verified){%>
-            <span id="<%=user._id%>" onclick="restrictUser(this)" class="verify-btn btn btn-outline-success ">
-              Verified
-              <i id="<%=user._id%>" class="fas fa-user-check"></i>
-            </span>
-
-          <%}else{%>
-            <span id="<%=user._id%>" onclick="verifyUser(this)" class="verify-btn btn btn-outline-danger ">
-              Unverified
-              <i id="<%=user._id%>" class="fas fa-user-times"></i>
-            </span>
-          <%}%>
-        </li>
-      <%}%>
-  </ul>
+<div class="console-header">
+  <h1 class="console-title">
+    <i class="fas fa-users me-1" style="color:var(--clr-accent)"></i> Users
+  </h1>
+  <button class="btn-refresh" onclick="reload()">
+    <i class="fas fa-sync"></i> Refresh
+  </button>
 </div>
 
-<a href="#" onclick="reload()" class="btn btn-outline-danger mt-5">
-  <i class="fas fa-1x fa-sync"></i> REFRESH
-</a>
+<% if (body.error) { %>
+  <div class="ss-alert ss-alert-danger mb-3" id="error-message">
+    <i class="fas fa-exclamation-circle me-1"></i> <%= body.error %>
+  </div>
+<% } %>
+<% if (body.message) { %>
+  <div class="ss-alert ss-alert-success mb-3" id="message">
+    <i class="fas fa-check-circle me-1"></i> <%= body.message %>
+  </div>
+<% } %>
+<p class="ss-alert ss-alert-danger mb-3 d-none" id="js-error-message"></p>
+<p class="ss-alert ss-alert-success mb-3 d-none" id="js-message"></p>
 
+<% if (users && users.length > 0) { %>
+  <% for (var user of users) { %>
+    <div class="user-card">
+      <div class="user-avatar"><%= user.username ? user.username.charAt(0).toUpperCase() : '?' %></div>
+      <span class="user-name"><%= user.username %></span>
+      <% if (user.verified) { %>
+        <span class="badge-verified me-2">Verified</span>
+        <button id="<%= user._id %>" onclick="restrictUser(this)"
+          class="btn-toggle-verify verified">
+          <i class="fas fa-user-check me-1"></i> Restrict
+        </button>
+      <% } else { %>
+        <span class="badge-unverified me-2">Pending</span>
+        <button id="<%= user._id %>" onclick="verifyUser(this)"
+          class="btn-toggle-verify unverified">
+          <i class="fas fa-user-times me-1"></i> Verify
+        </button>
+      <% } %>
+    </div>
+  <% } %>
+<% } else { %>
+  <div class="gate-code-card text-center" style="color:var(--clr-muted);padding:2rem">
+    <i class="fas fa-users fa-2x mb-2 d-block" style="opacity:.3"></i>
+    <p class="mb-0" style="font-size:.875rem">No users found</p>
+  </div>
+<% } %>
 
-<%- include('partials/footerAdminConsole'); %>
+<!-- Pending Code Submissions -->
+<div class="console-header mt-4">
+  <h2 class="console-title" style="font-size:.95rem">
+    <i class="fas fa-clock me-1" style="color:var(--clr-accent)"></i> Pending Code Submissions
+  </h2>
+</div>
+
+<% if (pendingCodes && pendingCodes.length > 0) { %>
+  <% for (var pc of pendingCodes) { %>
+    <div class="pending-code-card" id="pc-<%= pc._id %>">
+      <div class="pending-code-info">
+        <p class="pending-code-street"><i class="fas fa-road me-1"></i><%= pc.street %></p>
+        <p class="pending-code-location"><%= pc.city %><% if(pc.city && pc.stateCode){ %>, <% } %><%= pc.stateCode %></p>
+        <div class="pending-code-value">
+          <span class="gate-code-label" style="margin:0"><%= pc.gateCodeDescription || 'Gate Code' %></span>
+          <span class="pending-code-number">#<%= pc.gateCode %></span>
+        </div>
+        <p class="pending-code-date"><i class="fas fa-calendar-alt me-1"></i><%= new Date(pc.submittedAt).toLocaleDateString() %></p>
+      </div>
+      <div class="pending-code-actions">
+        <button class="btn-approve" onclick="approveCode('<%= pc._id %>')">
+          <i class="fas fa-check me-1"></i> Approve
+        </button>
+        <button class="btn-reject" onclick="rejectCode('<%= pc._id %>')">
+          <i class="fas fa-times me-1"></i> Reject
+        </button>
+      </div>
+    </div>
+  <% } %>
+<% } else { %>
+  <div class="gate-code-card text-center" style="color:var(--clr-muted);padding:1.5rem">
+    <i class="fas fa-inbox fa-2x mb-2 d-block" style="opacity:.3"></i>
+    <p class="mb-0" style="font-size:.875rem">No pending submissions</p>
+  </div>
+<% } %>
+
+<%- include('partials/footerAdminConsole') %>
