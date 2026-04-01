@@ -20,12 +20,9 @@
 
 <p class="gps-error mt-3" id="gpsError"></p>
 
-<!-- Hidden: GPS coordinates + form submission -->
+<!-- Hidden: GPS coordinates -->
 <div class="d-none" id="coord-x"></div>
 <div class="d-none" id="coord-y"></div>
-<form class="d-none" id="location-form" action="<%= body.domain %>/locate" method="POST">
-  <input type="text" name="position" id="position" value="">
-</form>
 
 <!-- Manual search (always visible once page loads) -->
 <div class="search-wrapper mt-3" id="search-section">
@@ -35,10 +32,17 @@
   <div class="search-results" id="resultList"></div>
 </div>
 
-<!-- Search result display (populated by search.js when a result is clicked) -->
+<!-- Search result display (populated by locate.js / search.js) -->
 <div id="defaultInfo" class="mt-3">
   <div id="communityDescription"></div>
   <div id="searchedCode"></div>
+</div>
+
+<!-- Re-locate button (shown after locate completes) -->
+<div class="d-none mt-3 text-center" id="locate-relocate">
+  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="reLocate()">
+    <i class="fas fa-sync me-1"></i> Re-locate
+  </button>
 </div>
 
 <!-- Admin include form (hidden, submitted when admin confirms) -->

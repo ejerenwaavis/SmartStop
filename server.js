@@ -27,7 +27,6 @@ const rateLimit            = require('express-rate-limit');
 const bodyParser           = require('body-parser');
 const compression          = require('compression');
 const mongoose             = require('mongoose');
-const findOrCreate         = require('mongoose-findorcreate');
 const _                    = require('lodash');
 const session              = require('express-session');
 const passport             = require('passport');
@@ -63,11 +62,7 @@ app.use(passport.session());
 
 // -- Database
 const mongoUri = process.env.MONGODB_URI;
-mongoose.connect(mongoUri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  useCreateIndex: true
-}).catch(function(err) { console.error('MongoDB connection error:', err); });
+mongoose.connect(mongoUri).catch(function(err) { console.error('MongoDB connection error:', err); });
 
 // -- Schemas & Models
 const userSchema = new mongoose.Schema({
@@ -76,7 +71,6 @@ const userSchema = new mongoose.Schema({
   verified: { type: Boolean, default: false }
 });
 userSchema.plugin(passportLocalMongoose);
-userSchema.plugin(findOrCreate);
 
 const communitySchema = new mongoose.Schema({
   communityName: { type: String, index: true },
@@ -330,6 +324,31 @@ app.get(APP_DIRECTORY + '/logout', function(req, res, next) {
     if (err) return next(err);
     res.redirect(APP_DIRECTORY + '/login');
   });
+});
+
+app.get(APP_DIRECTORY + '/locateJSON', requireAuth, async function(req, res) {
+  var lat = parseFloat(req.query.lat);
+  var lon = parseFloat(req.query.lon);
+  if (isNaN(lat) || isNaN(lon)) return res.json({ error: 'Invalid coordinates' });
+  try {
+    var data     = await nominatimReverseGeocode(lat, lon);
+    var location = nominatimAddressToHere(data);
+    debugLog('/locateJSON', location);
+    if (!location || !location.street) return res.json({ error: 'Could not determine your street. Search manually.' });
+    var foundObj = await Community.find({ streets: location.street });
+    if (foundObj[0]) {
+      res.json({
+        found:     true,
+        community: { streets: foundObj[0].streets, communityName: foundObj[0].communityName, gateCodes: foundObj[0].gateCodes },
+        location:  location
+      });
+    } else {
+      res.json({ found: false, location: location });
+    }
+  } catch (err) {
+    console.error('[locateJSON] error', err.message);
+    res.json({ error: 'Location lookup failed. Please try again.' });
+  }
 });
 
 app.get(APP_DIRECTORY + '/locate', function(req, res) {
