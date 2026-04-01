@@ -13,50 +13,33 @@ $(document).ready(function () {
     e.preventDefault();
     includeCommunity();
   });
+
+  runAutoLocateOnce();
 });
 
 // ── Geolocation ──────────────────────────────────────
-const hasLocateError = $('.ss-alert-danger').length > 0;
-const autoLocateKey = 'smartstop:auto-locate-ran';
-
-const getGeocode = new Promise(function (resolve, reject) {
-  if (!navigator.geolocation) {
-    return reject(new Error('Geolocation not supported'));
-  }
-  navigator.geolocation.getCurrentPosition(resolve, reject, {
-    enableHighAccuracy: true,
-    timeout: 10000,
-    maximumAge: 0
-  });
-});
-
-const getCurrentStreetName = new Promise(function (resolve, reject) {
-  getGeocode
-    .then(function (position) {
-      const coords = position.coords.latitude + ',' + position.coords.longitude;
-      $.post(domain + '/resourceStreet', { position: coords }, function (result) {
-        resolve(result || '');
-      }).fail(function () { resolve(''); });
-    })
-    .catch(function (err) { reject(err); });
-});
 
 function onGeoSuccess(position) {
   var lat = position.coords.latitude;
   var lon = position.coords.longitude;
-  sessionStorage.setItem(autoLocateKey, '1');
 
-  $.get(domain + '/locateJSON', { lat: lat, lon: lon }, function(data) {
-    $('#locating-state').hide();
-    renderLocateResult(data);
-  }).fail(function() {
-    $('#locating-state').hide();
-    $('#gpsError').text('Location lookup failed. Search manually above.');
+  $.ajax({
+    url: domain + '/locateJSON',
+    type: 'GET',
+    dataType: 'json',
+    data: { lat: lat, lon: lon },
+    success: function(data) {
+      $('#locating-state').hide();
+      renderLocateResult(data);
+    },
+    error: function() {
+      $('#locating-state').hide();
+      $('#gpsError').text('Location lookup failed. Search manually above.');
+    }
   });
 }
 
 function onGeoError(err) {
-  sessionStorage.setItem(autoLocateKey, '1');
   $('#locating-state').hide();
   var msg = 'Location access is off. Turn it on and refresh, or search manually above.';
   if (err && err.code === 1) {
@@ -66,19 +49,19 @@ function onGeoError(err) {
 }
 
 function runAutoLocateOnce() {
-  var alreadyRan = sessionStorage.getItem(autoLocateKey) === '1';
-  if (hasLocateError || alreadyRan) {
+  if (!navigator.geolocation) {
     $('#locating-state').hide();
-    if (hasLocateError) {
-      $('#gpsError').text('Automatic location lookup failed. Search manually above.');
-    }
+    $('#gpsError').text('Your browser does not support geolocation. Search manually above.');
     return;
   }
-  getGeocode.then(onGeoSuccess).catch(onGeoError);
+  navigator.geolocation.getCurrentPosition(onGeoSuccess, onGeoError, {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 0
+  });
 }
 
 function reLocate() {
-  sessionStorage.removeItem(autoLocateKey);
   $('#communityDescription').html('');
   $('#searchedCode').html('');
   $('#locate-relocate').addClass('d-none');
