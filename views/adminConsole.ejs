@@ -24,22 +24,44 @@
 
 <% if (users && users.length > 0) { %>
   <% for (var user of users) { %>
-    <div class="user-card">
+    <div class="user-card" id="uc-<%= user._id %>">
       <div class="user-avatar"><%= user.username ? user.username.charAt(0).toUpperCase() : '?' %></div>
-      <span class="user-name"><%= user.username %></span>
-      <% if (user.verified) { %>
-        <span class="badge-verified me-2">Verified</span>
-        <button id="<%= user._id %>" onclick="restrictUser(this)"
-          class="btn-toggle-verify verified">
-          <i class="fas fa-user-check me-1"></i> Restrict
+      <div class="user-info">
+        <span class="user-name"><%= user.username %></span>
+        <div class="user-badges">
+          <% if (user.role === 'admin') { %>
+            <span class="badge-role-admin">Admin</span>
+          <% } %>
+          <% if (user.verified) { %>
+            <span class="badge-verified">Verified</span>
+          <% } else { %>
+            <span class="badge-unverified">Pending</span>
+          <% } %>
+        </div>
+      </div>
+      <div class="user-actions">
+        <% if (user.verified) { %>
+          <button id="<%= user._id %>" onclick="restrictUser(this)" class="btn-toggle-verify verified" title="Revoke access">
+            <i class="fas fa-user-slash"></i>
+          </button>
+        <% } else { %>
+          <button id="<%= user._id %>" onclick="verifyUser(this)" class="btn-toggle-verify unverified" title="Grant access">
+            <i class="fas fa-user-check"></i>
+          </button>
+        <% } %>
+        <% if (user.role === 'admin') { %>
+          <button id="<%= user._id %>" onclick="demoteUser(this)" class="btn-demote" title="Demote from admin">
+            <i class="fas fa-arrow-down"></i>
+          </button>
+        <% } else { %>
+          <button id="<%= user._id %>" onclick="elevateUser(this)" class="btn-elevate" title="Promote to admin">
+            <i class="fas fa-arrow-up"></i>
+          </button>
+        <% } %>
+        <button id="<%= user._id %>" onclick="deleteUser(this)" class="btn-delete-user" title="Delete user">
+          <i class="fas fa-trash"></i>
         </button>
-      <% } else { %>
-        <span class="badge-unverified me-2">Pending</span>
-        <button id="<%= user._id %>" onclick="verifyUser(this)"
-          class="btn-toggle-verify unverified">
-          <i class="fas fa-user-times me-1"></i> Verify
-        </button>
-      <% } %>
+      </div>
     </div>
   <% } %>
 <% } else { %>

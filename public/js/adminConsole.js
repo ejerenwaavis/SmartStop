@@ -18,54 +18,110 @@ function consoleErr(msg) {
   setTimeout(function () { $('#js-error-message').addClass('d-none'); }, 4000);
 }
 
-function verifyUser(btn) {
+// ── Shared helper: get card by user ID ───────────────
+function getUserCard(userID) {
+  return document.getElementById('uc-' + userID);
+}
+
+// ── Shared helper: prompt console password once ──────
+function withConsolePassword(callback) {
   var password = prompt('Enter Console Password');
   if (!password) return;
-  var userID = btn.id;
-  $.post(domain + '/validateConsolePassword', { password: password }, function (granted) {
+  $.post(domain + '/validateConsolePassword', { password: password }, function(granted) {
     if (!granted) { consoleErr('Invalid console password.'); return; }
-    $.post(domain + '/verifyUser', { userID: userID }, function (ok) {
+    callback();
+  }).fail(function() { consoleErr('Network error.'); });
+}
+
+function verifyUser(btn) {
+  var userID = btn.id;
+  withConsolePassword(function() {
+    $.post(domain + '/verifyUser', { userID: userID }, function(ok) {
       if (ok) {
-        // Update button in place — fix the hardcoded ID bug from original
-        btn.outerHTML =
-          '<button id="' + userID + '" onclick="restrictUser(this)" class="btn-toggle-verify verified">' +
-          '<i class="fas fa-user-check me-1"></i> Restrict</button>';
-        // Update badge next to the button
-        var card = document.getElementById(userID) ? document.getElementById(userID).closest('.user-card') : null;
+        btn.outerHTML = '<button id="' + userID + '" onclick="restrictUser(this)" class="btn-toggle-verify verified" title="Revoke access"><i class="fas fa-user-slash"></i></button>';
+        var card = getUserCard(userID);
         if (card) {
           var badge = card.querySelector('.badge-unverified');
-          if (badge) { badge.className = 'badge-verified me-2'; badge.textContent = 'Verified'; }
+          if (badge) { badge.className = 'badge-verified'; badge.textContent = 'Verified'; }
         }
-        consoleMsg('User verified successfully.');
-      } else {
-        consoleErr('Unable to verify user.');
-      }
-    }).fail(function () { consoleErr('Network error.'); });
-  }).fail(function () { consoleErr('Network error.'); });
+        consoleMsg('User access granted.');
+      } else { consoleErr('Unable to verify user.'); }
+    }).fail(function() { consoleErr('Network error.'); });
+  });
 }
 
 function restrictUser(btn) {
-  var password = prompt('Enter Console Password');
-  if (!password) return;
   var userID = btn.id;
-  $.post(domain + '/validateConsolePassword', { password: password }, function (granted) {
-    if (!granted) { consoleErr('Invalid console password.'); return; }
-    $.post(domain + '/restrictUser', { userID: userID }, function (ok) {
+  withConsolePassword(function() {
+    $.post(domain + '/restrictUser', { userID: userID }, function(ok) {
       if (ok) {
-        btn.outerHTML =
-          '<button id="' + userID + '" onclick="verifyUser(this)" class="btn-toggle-verify unverified">' +
-          '<i class="fas fa-user-times me-1"></i> Verify</button>';
-        var card = document.getElementById(userID) ? document.getElementById(userID).closest('.user-card') : null;
+        btn.outerHTML = '<button id="' + userID + '" onclick="verifyUser(this)" class="btn-toggle-verify unverified" title="Grant access"><i class="fas fa-user-check"></i></button>';
+        var card = getUserCard(userID);
         if (card) {
           var badge = card.querySelector('.badge-verified');
-          if (badge) { badge.className = 'badge-unverified me-2'; badge.textContent = 'Pending'; }
+          if (badge) { badge.className = 'badge-unverified'; badge.textContent = 'Pending'; }
         }
-        consoleMsg('User restricted.');
-      } else {
-        consoleErr('Unable to restrict user.');
-      }
-    }).fail(function () { consoleErr('Network error.'); });
-  }).fail(function () { consoleErr('Network error.'); });
+        consoleMsg('User access revoked.');
+      } else { consoleErr('Unable to restrict user.'); }
+    }).fail(function() { consoleErr('Network error.'); });
+  });
+}
+
+function elevateUser(btn) {
+  var userID = btn.id;
+  withConsolePassword(function() {
+    $.post(domain + '/elevateUser', { userID: userID }, function(ok) {
+      if (ok) {
+        btn.outerHTML = '<button id="' + userID + '" onclick="demoteUser(this)" class="btn-demote" title="Demote from admin"><i class="fas fa-arrow-down"></i></button>';
+        var card = getUserCard(userID);
+        if (card) {
+          var badges = card.querySelector('.user-badges');
+          if (badges && !badges.querySelector('.badge-role-admin')) {
+            var adminBadge = document.createElement('span');
+            adminBadge.className = 'badge-role-admin';
+            adminBadge.textContent = 'Admin';
+            badges.insertBefore(adminBadge, badges.firstChild);
+          }
+        }
+        consoleMsg('User promoted to admin.');
+      } else { consoleErr('Unable to promote user.'); }
+    }).fail(function() { consoleErr('Network error.'); });
+  });
+}
+
+function demoteUser(btn) {
+  var userID = btn.id;
+  withConsolePassword(function() {
+    $.post(domain + '/demoteUser', { userID: userID }, function(ok) {
+      if (ok) {
+        btn.outerHTML = '<button id="' + userID + '" onclick="elevateUser(this)" class="btn-elevate" title="Promote to admin"><i class="fas fa-arrow-up"></i></button>';
+        var card = getUserCard(userID);
+        if (card) {
+          var adminBadge = card.querySelector('.badge-role-admin');
+          if (adminBadge) adminBadge.remove();
+        }
+        consoleMsg('User demoted from admin.');
+      } else { consoleErr('Unable to demote user.'); }
+    }).fail(function() { consoleErr('Network error.'); });
+  });
+}
+
+function deleteUser(btn) {
+  var userID = btn.id;
+  if (!confirm('Permanently delete this user? This cannot be undone.')) return;
+  withConsolePassword(function() {
+    $.post(domain + '/deleteUser', { userID: userID }, function(ok) {
+      if (ok) {
+        var card = getUserCard(userID);
+        if (card) {
+          card.style.transition = 'opacity .3s';
+          card.style.opacity = '0';
+          setTimeout(function() { card.remove(); }, 320);
+        }
+        consoleMsg('User deleted.');
+      } else { consoleErr('Unable to delete user.'); }
+    }).fail(function() { consoleErr('Network error.'); });
+  });
 }
 
 function approveCode(id) {

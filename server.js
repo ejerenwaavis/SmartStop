@@ -82,7 +82,8 @@ mongoose.connect(mongoUri).catch(function(err) { console.error('MongoDB connecti
 const userSchema = new mongoose.Schema({
   username: String,
   _id: String,
-  verified: { type: Boolean, default: false }
+  verified: { type: Boolean, default: false },
+  role:     { type: String, default: 'user' }  // 'user' | 'admin'
 });
 userSchema.plugin(passportLocalMongoose);
 
@@ -190,6 +191,18 @@ function requireAuth(req, res, next) {
   if (req.isAuthenticated()) return next();
   res.redirect(APP_DIRECTORY + '/login');
 }
+
+function requireAdmin(req, res, next) {
+  if (req.isAuthenticated() && (req.user.role === 'admin' || req.user.verified)) return next();
+  res.redirect(APP_DIRECTORY + '/');
+}
+
+// Expose isAdmin flag to every EJS template
+app.use(function(req, res, next) {
+  res.locals.isAdmin = !!(req.user && (req.user.role === 'admin' || req.user.verified));
+  res.locals.currentUser = req.user || null;
+  next();
+});
 
 function debugLog() {
   if (!DEBUG_API) return;
@@ -743,7 +756,7 @@ app.post(APP_DIRECTORY + '/adminInclude', requireAuth, function(req, res) {
   }
 });
 
-app.get(APP_DIRECTORY + '/adminConsole', requireAuth, async function(req, res) {
+app.get(APP_DIRECTORY + '/adminConsole', requireAdmin, async function(req, res) {
   try {
     var users = await User.find({});
     var pendingCodes = await PendingCode.find({}).sort({ submittedAt: -1 });
@@ -753,7 +766,7 @@ app.get(APP_DIRECTORY + '/adminConsole', requireAuth, async function(req, res) {
   }
 });
 
-app.post(APP_DIRECTORY + '/verifyUser', requireAuth, async function(req, res) {
+app.post(APP_DIRECTORY + '/verifyUser', requireAdmin, async function(req, res) {
   try {
     var r = await User.updateOne({ _id: req.body.userID }, { verified: true });
     res.json((r.modifiedCount || r.nModified || 0) > 0);
@@ -762,12 +775,133 @@ app.post(APP_DIRECTORY + '/verifyUser', requireAuth, async function(req, res) {
   }
 });
 
-app.post(APP_DIRECTORY + '/restrictUser', requireAuth, async function(req, res) {
+app.post(APP_DIRECTORY + '/restrictUser', requireAdmin, async function(req, res) {
   try {
     var r = await User.updateOne({ _id: req.body.userID }, { verified: false });
     res.json((r.modifiedCount || r.nModified || 0) > 0);
   } catch (err) {
     res.json(false);
+  }
+});
+
+app.post(APP_DIRECTORY + '/deleteUser', requireAdmin, async function(req, res) {
+  try {
+    var id = String((req.body.userID || '')).trim();
+    if (!id) return res.json(false);
+    if (req.user && req.user._id === id) return res.json(false); // prevent self-deletion
+    var r = await User.deleteOne({ _id: id });
+    res.json((r.deletedCount || 0) > 0);
+  } catch (err) {
+    res.json(false);
+  }
+});
+
+app.post(APP_DIRECTORY + '/elevateUser', requireAdmin, async function(req, res) {
+  try {
+    var id = String((req.body.userID || '')).trim();
+    if (!id) return res.json(false);
+    var r = await User.updateOne({ _id: id }, { role: 'admin', verified: true });
+    res.json((r.modifiedCount || r.nModified || 0) > 0);
+  } catch (err) {
+    res.json(false);
+  }
+});
+
+app.post(APP_DIRECTORY + '/demoteUser', requireAdmin, async function(req, res) {
+  try {
+    var id = String((req.body.userID || '')).trim();
+    if (!id) return res.json(false);
+    if (req.user && req.user._id === id) return res.json(false); // prevent self-demote
+    var r = await User.updateOne({ _id: id }, { role: 'user' });
+    res.json((r.modifiedCount || r.nModified || 0) > 0);
+  } catch (err) {
+    res.json(false);
+  }
+});
+
+app.get(APP_DIRECTORY + '/exportCodes', requireAdmin, async function(req, res) {
+  try {
+    var communities = await Community.find({}).lean();
+    var rows = ['Community,Streets,City,State,Gate Description,Gate Code'];
+    communities.forEach(function(c) {
+      var streets = (c.streets || []).join(' | ');
+      (c.gateCodes || []).forEach(function(g) {
+        rows.push([
+          '"' + (c.communityName || '').replace(/"/g,'""') + '"',
+          '"' + streets.replace(/"/g,'""') + '"',
+          '"' + (c.city || '').replace(/"/g,'""') + '"',
+          '"' + (c.stateCode || '').replace(/"/g,'""') + '"',
+          '"' + (g.description || '').replace(/"/g,'""') + '"',
+          '"' + (g.code || '').replace(/"/g,'""') + '"'
+        ].join(','));
+      });
+    });
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="smartstop-codes.csv"');
+    res.send(rows.join('\n'));
+  } catch (err) {
+    res.status(500).send('Export failed');
+  }
+});
+
+app.post(APP_DIRECTORY + '/deleteUser', requireAdmin, async function(req, res) {
+  try {
+    var id = String((req.body.userID || '')).trim();
+    if (!id) return res.json(false);
+    // Prevent self-deletion
+    if (req.user && req.user._id === id) return res.json(false);
+    var r = await User.deleteOne({ _id: id });
+    res.json((r.deletedCount || 0) > 0);
+  } catch (err) {
+    res.json(false);
+  }
+});
+
+app.post(APP_DIRECTORY + '/elevateUser', requireAdmin, async function(req, res) {
+  try {
+    var id = String((req.body.userID || '')).trim();
+    if (!id) return res.json(false);
+    var r = await User.updateOne({ _id: id }, { role: 'admin', verified: true });
+    res.json((r.modifiedCount || r.nModified || 0) > 0);
+  } catch (err) {
+    res.json(false);
+  }
+});
+
+app.post(APP_DIRECTORY + '/demoteUser', requireAdmin, async function(req, res) {
+  try {
+    var id = String((req.body.userID || '')).trim();
+    if (!id) return res.json(false);
+    if (req.user && req.user._id === id) return res.json(false); // prevent self-demote
+    var r = await User.updateOne({ _id: id }, { role: 'user' });
+    res.json((r.modifiedCount || r.nModified || 0) > 0);
+  } catch (err) {
+    res.json(false);
+  }
+});
+
+app.get(APP_DIRECTORY + '/exportCodes', requireAdmin, async function(req, res) {
+  try {
+    var communities = await Community.find({}).lean();
+    var rows = ['Community,Street,City,State,Gate Description,Gate Code'];
+    communities.forEach(function(c) {
+      var streets = (c.streets || []).join(' | ');
+      (c.gateCodes || []).forEach(function(g) {
+        rows.push([
+          '"' + (c.communityName || '').replace(/"/g,'""') + '"',
+          '"' + streets.replace(/"/g,'""') + '"',
+          '"' + (c.city || '').replace(/"/g,'""') + '"',
+          '"' + (c.stateCode || '').replace(/"/g,'""') + '"',
+          '"' + (g.description || '').replace(/"/g,'""') + '"',
+          '"' + (g.code || '').replace(/"/g,'""') + '"'
+        ].join(','));
+      });
+    });
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="smartstop-codes.csv"');
+    res.send(rows.join('\n'));
+  } catch (err) {
+    res.status(500).send('Export failed');
   }
 });
 

@@ -581,6 +581,76 @@ html, body {
 .btn-toggle-verify.unverified { color: #991b1b; background: #fee2e2; }
 .btn-toggle-verify.unverified:hover { background: #fecaca; }
 
+/* ── Admin sub-navigation bar ───────────────────────── */
+.admin-subnav {
+  background: #f0f4ff;
+  border-bottom: 1.5px solid #c7d2fe;
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .4rem 1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.admin-subnav::-webkit-scrollbar { display: none; }
+.admin-subnav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .35rem .75rem;
+  border-radius: 100px;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--clr-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.admin-subnav-link:hover { background: #c7d2fe; color: var(--clr-primary); text-decoration: none; }
+.admin-subnav-link i { font-size: .8rem; }
+
+/* ── User card — reworked layout ────────────────────── */
+.user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  min-width: 0;
+}
+.user-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+}
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  flex-shrink: 0;
+}
+.badge-role-admin { background: #ede9fe; color: #5b21b6; border-radius: 100px; padding: .2rem .65rem; font-size: .68rem; font-weight: 700; }
+
+/* ── User action icon buttons ───────────────────────── */
+.btn-elevate, .btn-demote, .btn-delete-user {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: .75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, transform .1s;
+}
+.btn-elevate      { background: #ede9fe; color: #5b21b6; }
+.btn-elevate:hover { background: #c4b5fd; transform: translateY(-1px); }
+.btn-demote       { background: #fef3c7; color: #92400e; }
+.btn-demote:hover  { background: #fde68a; transform: translateY(-1px); }
+.btn-delete-user  { background: #fee2e2; color: #991b1b; }
+.btn-delete-user:hover { background: #fca5a5; transform: translateY(-1px); }
+.btn-toggle-verify { width: 30px; height: 30px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+
 /* ── Toast bar ───────────────────────────────────────── */
 #toast-bar {
   position: fixed;

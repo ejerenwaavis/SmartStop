@@ -1,0 +1,19 @@
+<% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+<nav class="admin-subnav">
+  <a class="admin-subnav-link" href="<%= body.domain %>/">
+    <i class="fas fa-home"></i><span>Home</span>
+  </a>
+  <a class="admin-subnav-link" href="<%= body.domain %>/adminConsole">
+    <i class="fas fa-users-cog"></i><span>Console</span>
+  </a>
+  <a class="admin-subnav-link" href="<%= body.domain %>/adminAdd">
+    <i class="fas fa-plus-circle"></i><span>Add Community</span>
+  </a>
+  <a class="admin-subnav-link" href="<%= body.domain %>/adminInclude">
+    <i class="fas fa-map-marker-plus"></i><span>Include Address</span>
+  </a>
+  <a class="admin-subnav-link" href="<%= body.domain %>/exportCodes" target="_blank">
+    <i class="fas fa-file-csv"></i><span>Export CSV</span>
+  </a>
+</nav>
+<% } %>
