@@ -18,6 +18,7 @@ const APP_DIRECTORY  = process.env.APP_DIRECTORY || '';
 const BASE_URL       = process.env.BASE_URL || '';
 const DEBUG_API      = (process.env.DEBUG_API || '').toLowerCase() === 'true';
 const ADMIN_EMAILS   = (process.env.ADMIN_EMAILS || '').split(',').map(function(e) { return e.trim().toLowerCase(); }).filter(Boolean);
+const GOOGLE_MAPS_PLATFORM_API = (process.env.GOOGLE_MAPS_PLATFORM_API || '').trim();
 
 const express              = require('express');
 const https                = require('https');
@@ -37,6 +38,7 @@ const app = express();
 
 // -- Middleware
 app.set('view engine', 'ejs');
+app.locals.googleMapsApiKey = GOOGLE_MAPS_PLATFORM_API; // exposed to all EJS templates for client-side Places Autocomplete
 app.set('trust proxy', 1); // required behind Heroku/reverse-proxy for rate limiting and secure cookies
 app.use(helmet({ contentSecurityPolicy: false })); // CSP disabled — tune separately per deployment
 app.use(compression());
@@ -45,6 +47,18 @@ app.use(express.json());
 app.use(express.static('public'));
 if (APP_DIRECTORY) {
   app.use(APP_DIRECTORY, express.static('public'));
+} else {
+  // When deployed at domain root (no APP_DIRECTORY), redirect any legacy
+  // /smartstop/* paths so old bookmarks and links still work.
+  app.use(function(req, res, next) {
+    var m = req.path.match(/^\/smartstop(\/.*)?$/);
+    if (m) {
+      var tail = m[1] || '/';
+      var qs = req.url.slice(req.path.length);
+      return res.redirect(301, tail + qs);
+    }
+    next();
+  });
 }
 app.use(session({
   secret: SESSION_SECRET,
@@ -204,6 +218,8 @@ const authLimiter = rateLimit({
 
 // -- Nominatim (OpenStreetMap) geocoding helpers — no API key required
 const NOMINATIM_USER_AGENT = 'SmartStopApp/1.0 (internal-tool)';
+const GOOGLE_STREET_CACHE_TTL_MS = 10 * 60 * 1000;
+const googleStreetSuggestCache = new Map();
 
 function nominatimReverseGeocode(lat, lon) {
   return new Promise(function(resolve, reject) {
@@ -295,6 +311,177 @@ function expandStreetAbbreviation(name) {
   var last = parts[parts.length - 1].toLowerCase().replace(/\.$/, '');
   if (abbrs[last]) parts[parts.length - 1] = abbrs[last];
   return parts.join(' ');
+}
+
+function escapeRegExp(str) {
+  return String(str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function dedupeStreetSuggestions(items, limit) {
+  var seen = {};
+  var out = [];
+  (items || []).forEach(function(item) {
+    var street = String((item && item.street) || '').replace(/\s+/g, ' ').trim();
+    var city = String((item && item.city) || '').replace(/\s+/g, ' ').trim();
+    var state = String((item && item.state) || '').replace(/\s+/g, ' ').trim();
+    if (!street) return;
+    var key = [street.toLowerCase(), city.toLowerCase(), state.toLowerCase()].join('|');
+    if (seen[key]) return;
+    seen[key] = true;
+    out.push({ street: street, city: city, state: state });
+  });
+  return typeof limit === 'number' ? out.slice(0, limit) : out;
+}
+
+function parseGoogleSecondaryAddress(secondaryText) {
+  var bits = String(secondaryText || '').split(',').map(function(b) { return b.trim(); }).filter(Boolean);
+  var city = bits[0] || '';
+  var state = '';
+  if (bits[1]) {
+    state = bits[1].split(/\s+/)[0];
+  }
+  return { city: city, state: state };
+}
+
+async function getLocalStreetSuggestions(q, city, limit) {
+  var streetQuery = String(q || '').trim();
+  if (!streetQuery) return [];
+
+  var streetRe = new RegExp('^' + escapeRegExp(streetQuery), 'i');
+  var cityRe = city ? new RegExp('^' + escapeRegExp(city), 'i') : null;
+
+  var communityQuery = { streets: { $regex: streetRe } };
+  if (cityRe) communityQuery.city = { $regex: cityRe };
+
+  var pendingQuery = { street: { $regex: streetRe } };
+  if (cityRe) pendingQuery.city = { $regex: cityRe };
+
+  var results = await Promise.all([
+    Community.find(communityQuery, 'streets city stateCode').limit(40),
+    PendingCode.find(pendingQuery, 'street city stateCode').limit(20)
+  ]);
+
+  var communityDocs = results[0] || [];
+  var pendingDocs = results[1] || [];
+  var local = [];
+
+  communityDocs.forEach(function(doc) {
+    (doc.streets || []).forEach(function(street) {
+      if (!streetRe.test(street || '')) return;
+      local.push({ street: street, city: doc.city || '', state: doc.stateCode || '' });
+    });
+  });
+
+  pendingDocs.forEach(function(doc) {
+    if (!doc.street || !streetRe.test(doc.street)) return;
+    local.push({ street: doc.street, city: doc.city || '', state: doc.stateCode || '' });
+  });
+
+  local.sort(function(a, b) {
+    var s = a.street.localeCompare(b.street);
+    if (s !== 0) return s;
+    var c = a.city.localeCompare(b.city);
+    if (c !== 0) return c;
+    return a.state.localeCompare(b.state);
+  });
+
+  return dedupeStreetSuggestions(local, limit || 8);
+}
+
+async function getGoogleStreetSuggestions(q, city, limit) {
+  if (!GOOGLE_MAPS_PLATFORM_API) return [];
+
+  var cacheKey = (String(q || '').trim() + '|' + String(city || '').trim()).toLowerCase();
+  var cached = googleStreetSuggestCache.get(cacheKey);
+  if (cached && (Date.now() - cached.ts) < GOOGLE_STREET_CACHE_TTL_MS) {
+    return cached.items.slice(0, limit || 6);
+  }
+
+  var input = city ? q + ', ' + city : q;
+  var body = JSON.stringify({
+    input: input,
+    languageCode: 'en',
+    includedRegionCodes: ['us']
+  });
+
+  var data = await httpsPostJSON(
+    {
+      hostname: 'places.googleapis.com',
+      path: '/v1/places:autocomplete',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+        'X-Goog-Api-Key': GOOGLE_MAPS_PLATFORM_API,
+        'X-Goog-FieldMask': 'suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat.mainText.text,suggestions.placePrediction.structuredFormat.secondaryText.text'
+      }
+    },
+    body
+  );
+
+  var suggestions = [];
+  (data.suggestions || []).forEach(function(item) {
+    var p = item.placePrediction || {};
+    var main = (((p.structuredFormat || {}).mainText || {}).text || '').trim();
+    var secondary = (((p.structuredFormat || {}).secondaryText || {}).text || '').trim();
+    var full = (((p.text || {}).text) || '').trim();
+    var street = main || (full.split(',')[0] || '').trim();
+    if (!street) return;
+
+    var parsed = parseGoogleSecondaryAddress(secondary || full.split(',').slice(1).join(','));
+    suggestions.push({
+      street: street,
+      city: parsed.city || city || '',
+      state: parsed.state || ''
+    });
+  });
+
+  suggestions = dedupeStreetSuggestions(suggestions, limit || 6);
+  googleStreetSuggestCache.set(cacheKey, { ts: Date.now(), items: suggestions });
+  return suggestions;
+}
+
+async function getNominatimStreetSuggestions(q, city, limit) {
+  var query = city ? q + ', ' + city : q;
+  var max = Math.max(6, limit || 6);
+  var options = {
+    hostname: 'nominatim.openstreetmap.org',
+    path: '/search?q=' + encodeURIComponent(query) + '&format=json&addressdetails=1&limit=' + max,
+    method: 'GET',
+    headers: { 'User-Agent': NOMINATIM_USER_AGENT, 'Accept-Language': 'en' }
+  };
+
+  var results = await new Promise(function(resolve, reject) {
+    var r = https.request(options, function(resp) {
+      var raw = '';
+      resp.on('data', function(c) { raw += c; });
+      resp.on('end', function() {
+        try {
+          resolve(JSON.parse(raw));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    r.on('error', reject);
+    r.end();
+  });
+
+  var streets = [];
+  (results || []).forEach(function(item) {
+    if (!item.address) return;
+    var road = item.address.road || item.address.pedestrian || item.address.footway || item.address.path || '';
+    if (!road) return;
+    var c = item.address.city || item.address.town || item.address.village || item.address.suburb || '';
+    var s = item.address.state || '';
+    streets.push({ street: road, city: c, state: s });
+  });
+
+  return dedupeStreetSuggestions(streets, limit || 6);
+}
+
+function mergeStreetSuggestions(local, remote, limit) {
+  return dedupeStreetSuggestions((local || []).concat(remote || []), limit || 6);
 }
 
 // -- Routes
@@ -520,39 +707,13 @@ app.post(APP_DIRECTORY + '/discoverStreets', requireAuth, async function(req, re
 });
 
 app.get(APP_DIRECTORY + '/streetSuggest', requireAuth, async function(req, res) {
-  var q = (req.query.q || '').trim();
-  if (q.length < 3) return res.json([]);
+  var q = (req.query.q || '').trim().split(',')[0].trim();
+  if (q.length < 2) return res.json([]);
   try {
-    var city  = (req.query.city || '').trim();
-    var query = city ? q + ', ' + city : q;
-    var options = {
-      hostname: 'nominatim.openstreetmap.org',
-      path: '/search?q=' + encodeURIComponent(query) + '&format=json&addressdetails=1&limit=8',
-      method: 'GET',
-      headers: { 'User-Agent': NOMINATIM_USER_AGENT, 'Accept-Language': 'en' }
-    };
-    var results = await new Promise(function(resolve, reject) {
-      var r = https.request(options, function(resp) {
-        var raw = '';
-        resp.on('data', function(c) { raw += c; });
-        resp.on('end', function() { try { resolve(JSON.parse(raw)); } catch(e) { reject(e); } });
-      });
-      r.on('error', reject);
-      r.end();
-    });
-    var seen = {};
-    var streets = [];
-    (results || []).forEach(function(item) {
-      if (!item.address) return;
-      var road = item.address.road || item.address.pedestrian || item.address.footway || item.address.path || '';
-      if (!road || seen[road]) return;
-      seen[road] = true;
-      var c = item.address.city || item.address.town || item.address.village || item.address.suburb || '';
-      var s = item.address.state || '';
-      streets.push({ street: road, city: c, state: s });
-    });
-    debugLog('/streetSuggest', { q: q, city: city, results: streets.length });
-    res.json(streets.slice(0, 6));
+    var city = (req.query.city || '').trim();
+    var local = await getLocalStreetSuggestions(q, city, 6);
+    debugLog('/streetSuggest local', { q: q, city: city, count: local.length });
+    res.json(local);
   } catch (err) {
     debugLog('/streetSuggest error', err.message);
     res.json([]);
@@ -607,6 +768,94 @@ app.post(APP_DIRECTORY + '/restrictUser', requireAuth, async function(req, res) 
     res.json((r.modifiedCount || r.nModified || 0) > 0);
   } catch (err) {
     res.json(false);
+  }
+});
+
+app.post(APP_DIRECTORY + '/suggestCode', requireAuth, async function(req, res) {
+  try {
+    var street = sanitize((req.body.street || '').trim());
+    var city = sanitize((req.body.city || '').trim());
+    var stateCode = sanitize((req.body.stateCode || '').trim());
+    var postalCode = sanitize((req.body.postalCode || '').trim());
+    var description = sanitize((req.body.description || '').trim());
+    var code = sanitize((req.body.code || '').trim());
+
+    if (!street || !description || !code) {
+      return res.json({ ok: false });
+    }
+
+    await new PendingCode({
+      street: street,
+      city: city,
+      stateCode: stateCode,
+      postalCode: postalCode,
+      gateCodeDescription: description,
+      gateCode: code
+    }).save();
+
+    res.json({ ok: true });
+  } catch (err) {
+    debugLog('/suggestCode error', err.message);
+    res.json({ ok: false });
+  }
+});
+
+app.post(APP_DIRECTORY + '/approveCode', requireAuth, async function(req, res) {
+  try {
+    var id = String((req.body && req.body.id) || '').trim();
+    if (!id) return res.json({ ok: false });
+
+    var pending = await PendingCode.findById(id);
+    if (!pending) return res.json({ ok: false });
+
+    var street = sanitize((pending.street || '').trim());
+    var city = sanitize((pending.city || '').trim());
+    var stateCode = sanitize((pending.stateCode || '').trim());
+    var gateDescription = sanitize((pending.gateCodeDescription || 'Gate Code').trim());
+    var gateCode = sanitize((pending.gateCode || '').trim());
+
+    if (!street || !gateCode) return res.json({ ok: false });
+
+    var community = await Community.findOne({ streets: street });
+    if (community) {
+      var duplicateGate = (community.gateCodes || []).some(function(g) {
+        return String(g.description || '').toLowerCase() === gateDescription.toLowerCase() &&
+               String(g.code || '') === gateCode;
+      });
+
+      if (!duplicateGate) {
+        community.gateCodes.push({ description: gateDescription, code: gateCode });
+      }
+      if (!community.city && city) community.city = city;
+      if (!community.stateCode && stateCode) community.stateCode = stateCode;
+      await community.save();
+    } else {
+      await new Community({
+        communityName: street,
+        streets: [street],
+        city: city,
+        stateCode: stateCode,
+        gateCodes: [{ description: gateDescription, code: gateCode }]
+      }).save();
+    }
+
+    await PendingCode.deleteOne({ _id: pending._id });
+    res.json({ ok: true });
+  } catch (err) {
+    debugLog('/approveCode error', err.message);
+    res.json({ ok: false });
+  }
+});
+
+app.post(APP_DIRECTORY + '/rejectCode', requireAuth, async function(req, res) {
+  try {
+    var id = String((req.body && req.body.id) || '').trim();
+    if (!id) return res.json({ ok: false });
+    await PendingCode.deleteOne({ _id: id });
+    res.json({ ok: true });
+  } catch (err) {
+    debugLog('/rejectCode error', err.message);
+    res.json({ ok: false });
   }
 });
 

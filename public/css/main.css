@@ -411,6 +411,40 @@ html, body {
 .btn-discover:disabled { opacity: .5; cursor: not-allowed; }
 .discover-spinner { display: inline-block; width: .75rem; height: .75rem; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
 
+.btn-add-street {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: .8rem;
+  font-weight: 700;
+  padding: .45rem .95rem;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: .28rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(217, 119, 6, .28);
+  transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+.btn-add-street:hover {
+  color: #fff;
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow: 0 7px 14px rgba(217, 119, 6, .32);
+}
+
+.btn-add-street:active {
+  transform: translateY(0);
+}
+
+.btn-add-street:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, .25), 0 7px 14px rgba(217, 119, 6, .32);
+}
+
 .discovery-list {
   background: var(--clr-bg);
   border: 1px solid var(--clr-border);
@@ -664,6 +698,41 @@ html, body {
   font-size: .78rem;
   color: var(--clr-muted);
   margin-bottom: .85rem;
+}
+
+/* ── Shared street autocomplete ─────────────────── */
+.street-ac-wrapper {
+  position: relative;
+}
+.street-ac-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 220;
+  background: #fff;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.street-ac-item {
+  padding: .55rem .85rem;
+  font-size: .85rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.street-ac-item:last-child {
+  border-bottom: none;
+}
+.street-ac-item:hover,
+.street-ac-item.ac-active {
+  background: var(--clr-accent);
+  color: #fff;
 }
 
 /* ── No-results banner (search.js empty state) ─────── */

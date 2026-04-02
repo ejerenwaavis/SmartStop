@@ -2,11 +2,23 @@
 // Manages the add-community admin form: gate codes, street tags, discovery
 // NOTE: `domain` is declared by locate.js which is loaded first via footerAdmin.ejs
 
+var _adminLat = null;
+var _adminLng = null;
+
 $(document).ready(function () {
   var $err = $('#js-error-message');
   if ($err.length) setTimeout(function () { $err.addClass('d-none'); }, 4000);
   var $msg = $('.ss-alert-success');
   if ($msg.length) setTimeout(function () { $msg.fadeOut(600); }, 4000);
+
+  // Eagerly grab GPS so autocomplete can bias to user's area
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      function(pos) { _adminLat = pos.coords.latitude; _adminLng = pos.coords.longitude; },
+      function() { /* permission denied or unavailable — fall back to unbiased results */ },
+      { timeout: 10000, maximumAge: 60000 }
+    );
+  }
 });
 
 // ── Street tag system ─────────────────────────────────
@@ -93,26 +105,67 @@ function streetInputKeyDown(e) {
   }
 }
 
+function _googlePlaceSuggest(q, geoOptions, callback) {
+  if (!window.google || !google.maps || !google.maps.places) { callback([]); return; }
+  var svc = new google.maps.places.AutocompleteService();
+  var opts = {
+    input: q,
+    types: ['geocode'],
+    componentRestrictions: { country: 'us' }
+  };
+  if (geoOptions && geoOptions.lat && geoOptions.lng) {
+    opts.location = new google.maps.LatLng(geoOptions.lat, geoOptions.lng);
+    opts.radius = 80000; // 80 km bias — heavily prefers nearby streets
+    opts.strictBounds = false;
+  }
+  svc.getPlacePredictions(opts, function(preds, status) {
+    if (status !== google.maps.places.PlacesServiceStatus.OK || !preds) { callback([]); return; }
+    callback(preds.slice(0, 6).map(function(p) {
+      var terms = p.terms || [];
+      return {
+        street: terms[0] ? terms[0].value : (p.description.split(',')[0] || '').trim(),
+        city:   terms[1] ? terms[1].value : '',
+        state:  terms[2] ? terms[2].value : ''
+      };
+    }));
+  });
+}
+
 function fetchStreetSuggestions(q) {
-  var streetPart = q.split(',')[0].trim(); // only the street name, not any city the user typed
+  var streetPart = q.split(',')[0].trim();
   var city = $('#city').val().trim();
   var url  = domain + '/streetSuggest?q=' + encodeURIComponent(streetPart) + (city ? '&city=' + encodeURIComponent(city) : '');
-  $.getJSON(url, function (results) {
-    var $drop = $('#street-ac-dropdown');
-    $drop.html('').addClass('d-none');
-    if (!results || !results.length) return;
-    results.forEach(function (r) {
-      var label = r.street + (r.city ? ', ' + r.city : '') + (r.state ? ', ' + r.state : '');
-      $('<div class="street-ac-item"></div>')
-        .text(label)
-        .attr({ 'data-street': r.street, 'data-city': r.city || '', 'data-state': r.state || '' })
-        .on('mousedown', function (e) {
-          e.preventDefault(); // prevent blur before click
-          selectStreetSuggestion(r.street, r.city, r.state);
-        })
-        .appendTo($drop);
+  $.getJSON(url, function (localResults) {
+    var allResults = (localResults || []).slice();
+
+    function renderDropdown(results) {
+      var $drop = $('#street-ac-dropdown');
+      $drop.html('').addClass('d-none');
+      if (!results || !results.length) return;
+      results.forEach(function (r) {
+        var label = r.street + (r.city ? ', ' + r.city : '') + (r.state ? ', ' + r.state : '');
+        $('<div class="street-ac-item"></div>')
+          .text(label)
+          .attr({ 'data-street': r.street, 'data-city': r.city || '', 'data-state': r.state || '' })
+          .on('mousedown', function (e) {
+            e.preventDefault();
+            selectStreetSuggestion(r.street, r.city, r.state);
+          })
+          .appendTo($drop);
+      });
+      $drop.removeClass('d-none');
+    }
+
+    if (allResults.length >= 6) { renderDropdown(allResults.slice(0, 6)); return; }
+
+    _googlePlaceSuggest(streetPart, { lat: _adminLat, lng: _adminLng }, function(googleResults) {
+      var seen = {};
+      allResults.forEach(function(r) { seen[(r.street || '').toLowerCase()] = true; });
+      (googleResults || []).forEach(function(g) {
+        if (!seen[(g.street || '').toLowerCase()]) { allResults.push(g); seen[(g.street || '').toLowerCase()] = true; }
+      });
+      renderDropdown(allResults.slice(0, 6));
     });
-    $drop.removeClass('d-none');
   }).fail(function () { closeStreetAc(); });
 }
 

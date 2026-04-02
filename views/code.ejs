@@ -64,6 +64,16 @@
       <div id="suggest-form" class="suggest-form d-none">
         <p class="suggest-form-title"><i class="fas fa-key me-1"></i> Submit a Code for Review</p>
         <p class="suggest-form-hint">Codes are reviewed by an admin before going live.</p>
+        <div class="street-ac-wrapper mb-2" id="suggest-ac-wrapper">
+          <input type="text" id="suggest-street-input" class="form-control"
+            value="<%= community.streets[0] %>"
+            placeholder="Street (edit or search)"
+            autocomplete="off"
+            onfocus="suggestStreetInputChange(this)"
+            oninput="suggestStreetInputChange(this)"
+            onkeydown="suggestStreetKeyDown(event)">
+          <div class="street-ac-dropdown d-none" id="suggest-street-dropdown"></div>
+        </div>
         <input type="hidden" id="suggest-street" value="<%= community.streets[0] %>">
         <input type="hidden" id="suggest-city" value="<%= location && location.city ? location.city : '' %>">
         <input type="hidden" id="suggest-state" value="<%= location && location.stateCode ? location.stateCode : '' %>">

@@ -52,6 +52,7 @@
           value="<%= location ? location.street : '' %>"
           placeholder="Type a street name (e.g. Hughes Drive)"
           autocomplete="off"
+          onfocus="streetInputChange(this)"
           oninput="streetInputChange(this)"
           onkeydown="streetInputKeyDown(event)">
         <button type="button" class="btn-add-street" onclick="addCurrentStreet()" title="Add this street">
