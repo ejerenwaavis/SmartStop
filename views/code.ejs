@@ -1,10 +1,10 @@
-﻿<%- include('partials/header') %>
+<%- include('partials/header') %>
 
 <div class="d-none" id="coord-x"></div>
 <div class="d-none" id="coord-y"></div>
 
 <!-- Search bar -->
-<div class="search-wrapper mb-4">
+<div class="search-wrapper">
   <i class="fas fa-search search-icon-prefix"></i>
   <input autocomplete="off" type="text" onkeyup="find(this)" class="search-field"
     id="search-field" placeholder="Search community or street&hellip;">
@@ -14,11 +14,11 @@
 <!-- Community & gate codes display -->
 <div id="defaultInfo">
 
-  <!-- Community info card -->
+  <!-- Community info -->
   <div id="communityDescription">
     <div class="community-card">
       <p class="community-name">
-        <i class="fas fa-map-marker-alt me-1" style="color:var(--clr-accent)"></i>
+        <i class="fas fa-map-marker-alt"></i>
         <% if (community.communityName === 'Unregistered') { %>
           <%= community.streets[0] %>
         <% } else { %>
@@ -31,7 +31,7 @@
         <% } %>
       </div>
       <% if (typeof location !== 'undefined' && location && location.city) { %>
-        <p class="mt-2 mb-0" style="font-size:.78rem;color:var(--clr-muted)">
+        <p style="font-size:.72rem;color:var(--clr-muted);margin:.4rem 0 0">
           <i class="fas fa-city me-1"></i><%= location.city %><% if(location.stateCode){ %>, <%= location.stateCode %><% } %>
         </p>
       <% } %>
@@ -40,27 +40,48 @@
 
   <!-- Gate codes -->
   <% if (community.gateCodes && community.gateCodes.length > 0) { %>
-    <p class="gate-codes-section-label"><i class="fas fa-key me-1"></i> Gate Codes</p>
+    <p class="gate-codes-section-label"><i class="fas fa-key"></i> Gate Codes</p>
     <div id="defaultCode">
-      <% for (var gateCode of community.gateCodes) { %>
-        <div class="gate-code-card">
-          <p class="gate-code-label"><%= gateCode.description || 'Gate Code' %></p>
-          <p class="gate-code-number">
-            <%= (gateCode.code.toString().length === 4 && gateCode.code.toString() !== '0000') ? '#' : '' %><%= gateCode.code %>
-          </p>
+      <% for (var i = 0; i < community.gateCodes.length; i++) {
+           var gateCode = community.gateCodes[i];
+           var codeStr  = String(gateCode.code || '');
+           var showHash = (codeStr.length === 4 && codeStr !== '0000');
+      %>
+        <div class="gate-code-card<%= i === 0 ? ' gate-code-primary' : '' %>">
+          <% if (i === 0) { %>
+            <span class="gate-code-label"><%= gateCode.description || 'Gate Code' %></span>
+            <p class="gate-code-number">
+              <% if (showHash) { %><span class="code-hash">#</span><% } %><%= codeStr %>
+            </p>
+            <button class="gate-code-copy-btn" onclick="copyGateCode(this,'<%= codeStr %>')">
+              <i class="fas fa-copy"></i> Copy Code
+            </button>
+          <% } else { %>
+            <div>
+              <span class="gate-code-label"><%= gateCode.description || 'Gate Code' %></span>
+              <p class="gate-code-number">
+                <% if (showHash) { %><span class="code-hash">#</span><% } %><%= codeStr %>
+              </p>
+            </div>
+            <button class="gate-code-copy-btn" onclick="copyGateCode(this,'<%= codeStr %>')">
+              <i class="fas fa-copy"></i> Copy
+            </button>
+          <% } %>
         </div>
       <% } %>
     </div>
   <% } else { %>
     <% if (community.communityName === 'Unregistered') { %>
+
       <div class="no-codes-card">
         <div class="no-codes-icon-wrap"><i class="fas fa-key"></i></div>
-        <p class="no-codes-street">Street detected, no codes on file</p>
-        <p class="no-codes-label">Be the first to submit a code for <strong><%= community.streets[0] %></strong></p>
+        <p class="no-codes-street">No codes on file yet</p>
+        <p class="no-codes-label">Be the first to submit a gate code for<br><strong><%= community.streets[0] %></strong></p>
         <button type="button" class="btn-suggest-code" onclick="toggleSuggestForm()">
-          <i class="fas fa-plus me-1"></i> Suggest a Code
+          <i class="fas fa-plus"></i> Suggest a Code
         </button>
       </div>
+
       <div id="suggest-form" class="suggest-form d-none">
         <p class="suggest-form-title"><i class="fas fa-key me-1"></i> Submit a Code for Review</p>
         <p class="suggest-form-hint">Codes are reviewed by an admin before going live.</p>
@@ -88,10 +109,21 @@
         <p class="d-none ss-alert ss-alert-danger mt-2" id="suggest-error"></p>
         <p class="d-none ss-alert ss-alert-success mt-2" id="suggest-success"></p>
       </div>
+
+      <div class="divider"></div>
+      <div class="text-center">
+        <a href="#" class="admin-text-link" onclick="focusOnAdminPass(); return false;"
+          data-bs-toggle="modal" data-bs-target="#adminPassModal">
+          <i class="fas fa-wrench"></i> Admin? Register this street
+        </a>
+      </div>
+
     <% } else { %>
-      <div class="gate-code-card" style="color:var(--clr-muted);text-align:center;padding:2rem">
-        <i class="fas fa-key fa-2x mb-2 d-block" style="opacity:.3"></i>
-        <p class="mb-0" style="font-size:.875rem">No gate codes on record for this community</p>
+      <div class="gate-code-card" style="justify-content:center;color:var(--clr-muted);text-align:center;padding:2rem">
+        <div>
+          <i class="fas fa-key fa-2x mb-2 d-block" style="opacity:.3"></i>
+          <p class="mb-0" style="font-size:.875rem">No gate codes on record</p>
+        </div>
       </div>
     <% } %>
   <% } %>
@@ -101,14 +133,6 @@
 
   <!-- Admin: unregistered community handler -->
   <% if (community.communityName === 'Unregistered') { %>
-    <div id="adminInclude" class="unregistered-banner">
-      <p class="unregistered-title"><i class="fas fa-tools me-1"></i> Admin: Register This Address</p>
-      <p class="unregistered-text">Formally add this street with a community name and full details.</p>
-      <button type="button" class="btn-accent" onclick="focusOnAdminPass()"
-        data-bs-toggle="modal" data-bs-target="#adminPassModal">
-        <i class="fas fa-plus"></i> Include Community
-      </button>
-    </div>
     <div id="adminStuff">
       <form class="d-none" id="geoCodeForm" action="<%= body.domain %>/adminInclude" method="post">
         <textarea name="locationJSONString"><%= JSON.stringify(location) %></textarea>
@@ -140,9 +164,9 @@
   </div>
 </div>
 
-<div class="mt-4 text-center">
-  <a href="<%= body.domain %>/" class="btn btn-sm btn-outline-secondary">
-    <i class="fas fa-sync me-1"></i> Re-locate
+<div class="relocate-row">
+  <a href="<%= body.domain %>/" class="btn-relocate">
+    <i class="fas fa-location-crosshairs"></i> Re-locate me
   </a>
 </div>
 

@@ -1,14 +1,5 @@
 <%- include('partials/header') %>
 
-<div class="console-header">
-  <h1 class="console-title">
-    <i class="fas fa-users me-1" style="color:var(--clr-accent)"></i> Users
-  </h1>
-  <button class="btn-refresh" onclick="reload()">
-    <i class="fas fa-sync"></i> Refresh
-  </button>
-</div>
-
 <% if (body.error) { %>
   <div class="ss-alert ss-alert-danger mb-3" id="error-message">
     <i class="fas fa-exclamation-circle me-1"></i> <%= body.error %>
@@ -22,89 +13,118 @@
 <p class="ss-alert ss-alert-danger mb-3 d-none" id="js-error-message"></p>
 <p class="ss-alert ss-alert-success mb-3 d-none" id="js-message"></p>
 
-<% if (users && users.length > 0) { %>
-  <% for (var user of users) { %>
-    <div class="user-card" id="uc-<%= user._id %>">
-      <div class="user-avatar"><%= user.username ? user.username.charAt(0).toUpperCase() : '?' %></div>
-      <div class="user-info">
-        <span class="user-name"><%= user.username %></span>
-        <div class="user-badges">
-          <% if (user.role === 'admin') { %>
-            <span class="badge-role-admin">Admin</span>
-          <% } %>
-          <% if (user.verified) { %>
-            <span class="badge-verified">Verified</span>
-          <% } else { %>
-            <span class="badge-unverified">Pending</span>
-          <% } %>
-        </div>
-      </div>
-      <div class="user-actions">
-        <% if (user.verified) { %>
-          <button id="<%= user._id %>" onclick="restrictUser(this)" class="btn-toggle-verify verified" title="Revoke access">
-            <i class="fas fa-user-slash"></i>
-          </button>
-        <% } else { %>
-          <button id="<%= user._id %>" onclick="verifyUser(this)" class="btn-toggle-verify unverified" title="Grant access">
-            <i class="fas fa-user-check"></i>
-          </button>
-        <% } %>
-        <% if (user.role === 'admin') { %>
-          <button id="<%= user._id %>" onclick="demoteUser(this)" class="btn-demote" title="Demote from admin">
-            <i class="fas fa-arrow-down"></i>
-          </button>
-        <% } else { %>
-          <button id="<%= user._id %>" onclick="elevateUser(this)" class="btn-elevate" title="Promote to admin">
-            <i class="fas fa-arrow-up"></i>
-          </button>
-        <% } %>
-        <button id="<%= user._id %>" onclick="deleteUser(this)" class="btn-delete-user" title="Delete user">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-    </div>
-  <% } %>
-<% } else { %>
-  <div class="gate-code-card text-center" style="color:var(--clr-muted);padding:2rem">
-    <i class="fas fa-users fa-2x mb-2 d-block" style="opacity:.3"></i>
-    <p class="mb-0" style="font-size:.875rem">No users found</p>
-  </div>
-<% } %>
-
-<!-- Pending Code Submissions -->
-<div class="console-header mt-4">
-  <h2 class="console-title" style="font-size:.95rem">
-    <i class="fas fa-clock me-1" style="color:var(--clr-accent)"></i> Pending Code Submissions
-  </h2>
+<div class="console-header">
+  <h1 class="console-title">Console</h1>
+  <button class="btn-refresh" onclick="reload()">
+    <i class="fas fa-sync"></i> Refresh
+  </button>
 </div>
 
-<% if (pendingCodes && pendingCodes.length > 0) { %>
-  <% for (var pc of pendingCodes) { %>
-    <div class="pending-code-card" id="pc-<%= pc._id %>">
-      <div class="pending-code-info">
-        <p class="pending-code-street"><i class="fas fa-road me-1"></i><%= pc.street %></p>
-        <p class="pending-code-location"><%= pc.city %><% if(pc.city && pc.stateCode){ %>, <% } %><%= pc.stateCode %></p>
-        <div class="pending-code-value">
-          <span class="gate-code-label" style="margin:0"><%= pc.gateCodeDescription || 'Gate Code' %></span>
-          <span class="pending-code-number">#<%= pc.gateCode %></span>
+<!-- Tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-btn-users" onclick="switchTab('users')">
+    <i class="fas fa-users" style="font-size:.75rem"></i> Users
+  </button>
+  <button class="tab-btn" id="tab-btn-pending" onclick="switchTab('pending')">
+    <i class="fas fa-clock" style="font-size:.75rem"></i> Pending
+    <% if (pendingCodes && pendingCodes.length > 0) { %>
+      <span class="tab-badge"><%= pendingCodes.length %></span>
+    <% } %>
+  </button>
+</div>
+
+<!-- Users tab -->
+<div id="tab-users">
+  <% if (users && users.length > 0) { %>
+    <% for (var user of users) { %>
+      <div class="user-card" id="uc-<%= user._id %>">
+        <div class="user-avatar"><%= user.username ? user.username.charAt(0).toUpperCase() : '?' %></div>
+        <div class="user-info">
+          <div class="user-name"><%= user.username %></div>
+          <div class="user-badges">
+            <% if (user.role === 'admin') { %>
+              <span class="badge-role-admin">Admin</span>
+            <% } %>
+            <% if (user.verified) { %>
+              <span class="badge-verified"><i class="fas fa-check-circle" style="font-size:.5rem"></i> Verified</span>
+            <% } else { %>
+              <span class="badge-unverified">Pending</span>
+            <% } %>
+          </div>
         </div>
-        <p class="pending-code-date"><i class="fas fa-calendar-alt me-1"></i><%= new Date(pc.submittedAt).toLocaleDateString() %></p>
+        <div class="user-actions">
+          <% if (user.verified) { %>
+            <button id="<%= user._id %>" onclick="restrictUser(this)" class="btn-toggle-verify verified" title="Revoke access">
+              <i class="fas fa-user-slash"></i>
+            </button>
+          <% } else { %>
+            <button id="<%= user._id %>" onclick="verifyUser(this)" class="btn-toggle-verify unverified" title="Grant access">
+              <i class="fas fa-user-check"></i>
+            </button>
+          <% } %>
+          <% if (user.role === 'admin') { %>
+            <button id="<%= user._id %>" onclick="demoteUser(this)" class="btn-demote" title="Demote from admin">
+              <i class="fas fa-arrow-down"></i>
+            </button>
+          <% } else { %>
+            <button id="<%= user._id %>" onclick="elevateUser(this)" class="btn-elevate" title="Promote to admin">
+              <i class="fas fa-arrow-up"></i>
+            </button>
+          <% } %>
+          <button id="<%= user._id %>" onclick="deleteUser(this)" class="btn-delete-user" title="Delete user">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
       </div>
-      <div class="pending-code-actions">
-        <button class="btn-approve" onclick="approveCode('<%= pc._id %>')">
-          <i class="fas fa-check me-1"></i> Approve
-        </button>
-        <button class="btn-reject" onclick="rejectCode('<%= pc._id %>')">
-          <i class="fas fa-times me-1"></i> Reject
-        </button>
-      </div>
+    <% } %>
+  <% } else { %>
+    <div class="no-results-banner">
+      <i class="fas fa-users" style="opacity:.3;font-size:1.5rem;display:block;margin-bottom:.5rem"></i>
+      No users found
     </div>
   <% } %>
-<% } else { %>
-  <div class="gate-code-card text-center" style="color:var(--clr-muted);padding:1.5rem">
-    <i class="fas fa-inbox fa-2x mb-2 d-block" style="opacity:.3"></i>
-    <p class="mb-0" style="font-size:.875rem">No pending submissions</p>
-  </div>
-<% } %>
+</div>
+
+<!-- Pending tab (hidden by default) -->
+<div id="tab-pending" style="display:none">
+  <% if (pendingCodes && pendingCodes.length > 0) { %>
+    <% for (var pc of pendingCodes) { %>
+      <% var rawCode = String(pc.gateCode || '').replace(/^#+/, ''); %>
+      <div class="pending-code-card" id="pc-<%= pc._id %>">
+        <div class="pending-code-info">
+          <p class="pending-code-street"><%= pc.street %></p>
+          <p class="pending-code-location"><%= pc.city %><% if(pc.city && pc.stateCode){ %>, <% } %><%= pc.stateCode %></p>
+          <div class="pending-code-value">
+            <span class="pending-type-chip"><%= pc.gateCodeDescription || 'Code' %></span>
+            <span class="pending-code-number"><% if (rawCode.length === 4 && rawCode !== '0000') { %><span class="code-hash">#</span><% } %><%= rawCode %></span>
+          </div>
+          <p class="pending-code-date"><i class="fas fa-calendar-alt me-1"></i><%= new Date(pc.submittedAt).toLocaleDateString() %></p>
+        </div>
+        <div class="pending-code-actions">
+          <button class="btn-approve" onclick="approveCode('<%= pc._id %>')">
+            <i class="fas fa-check"></i> Approve
+          </button>
+          <button class="btn-reject" onclick="rejectCode('<%= pc._id %>')">
+            <i class="fas fa-times"></i> Reject
+          </button>
+        </div>
+      </div>
+    <% } %>
+  <% } else { %>
+    <div class="no-results-banner">
+      <i class="fas fa-inbox" style="opacity:.3;font-size:1.5rem;display:block;margin-bottom:.5rem"></i>
+      No pending submissions
+    </div>
+  <% } %>
+</div>
+
+<script>
+function switchTab(tab) {
+  document.getElementById('tab-users').style.display   = tab === 'users'   ? '' : 'none';
+  document.getElementById('tab-pending').style.display = tab === 'pending' ? '' : 'none';
+  document.getElementById('tab-btn-users').classList.toggle('active',   tab === 'users');
+  document.getElementById('tab-btn-pending').classList.toggle('active', tab === 'pending');
+}
+</script>
 
 <%- include('partials/footerAdminConsole') %>

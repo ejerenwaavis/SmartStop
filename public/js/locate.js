@@ -5,13 +5,11 @@ var _userLat = null;
 var _userLng = null;
 
 $(document).ready(function () {
-  // Show admin include section only when location payload is present
   var payload = ($('#locationJSONString').val() || $('#geoCodeForm textarea[name="locationJSONString"]').val() || '').trim();
   if ($('#adminInclude').length && payload) {
     $('#adminInclude').removeClass('d-none');
   }
 
-  // Admin include form submission via modal
   $('#accessForm').on('submit', function (e) {
     e.preventDefault();
     includeCommunity();
@@ -84,7 +82,42 @@ function esc(str) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
 }
 
-// ── Render locate results inline ─────────────────────
+// ── Copy gate code to clipboard ───────────────────────
+function copyGateCode(btn, code) {
+  navigator.clipboard.writeText(String(code)).catch(function() {});
+  var orig = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+  btn.classList.add('copied');
+  setTimeout(function() {
+    btn.innerHTML = orig;
+    btn.classList.remove('copied');
+  }, 1500);
+}
+
+// ── Build gate code card HTML ─────────────────────────
+function buildGateCardHtml(gc, isPrimary) {
+  var codeStr  = String(gc.code || '');
+  var showHash = (codeStr.length === 4 && codeStr !== '0000');
+  var hashHtml = showHash ? '<span class="code-hash">#</span>' : '';
+  var label    = esc(gc.description || 'Gate Code');
+  var cls      = 'gate-code-card' + (isPrimary ? ' gate-code-primary' : '');
+  var copyLabel = isPrimary ? '<i class="fas fa-copy"></i> Copy Code' : '<i class="fas fa-copy"></i> Copy';
+
+  if (isPrimary) {
+    return '<div class="' + cls + '">' +
+      '<span class="gate-code-label">' + label + '</span>' +
+      '<p class="gate-code-number">' + hashHtml + esc(codeStr) + '</p>' +
+      '<button class="gate-code-copy-btn" onclick="copyGateCode(this,\'' + esc(codeStr) + '\')">' + copyLabel + '</button>' +
+      '</div>';
+  }
+  return '<div class="' + cls + '">' +
+    '<div><span class="gate-code-label">' + label + '</span>' +
+    '<p class="gate-code-number">' + hashHtml + esc(codeStr) + '</p></div>' +
+    '<button class="gate-code-copy-btn" onclick="copyGateCode(this,\'' + esc(codeStr) + '\')">' + copyLabel + '</button>' +
+    '</div>';
+}
+
+// ── Render locate results inline ──────────────────────
 function renderLocateResult(data) {
   if (data.error) {
     $('#gpsError').text(data.error);
@@ -92,42 +125,37 @@ function renderLocateResult(data) {
   }
   var loc = data.location;
 
-  // Populate admin include form with location JSON
   $('#locationJSONString').val(JSON.stringify(loc));
 
   // Community card
-  var displayName = data.found ? esc(data.community.communityName) + ' Community' : esc(loc.street);
-  var streets     = data.found ? data.community.streets : [loc.street];
+  var displayName  = data.found ? esc(data.community.communityName) + ' Community' : esc(loc.street);
+  var streets      = data.found ? data.community.streets : [loc.street];
   var streetBadges = streets.map(function(s) {
     return '<span class="street-badge"><i class="fas fa-road me-1"></i>' + esc(s) + '</span>';
   }).join('');
   var cityLine = loc.city
-    ? '<p class="mt-2 mb-0" style="font-size:.78rem;color:var(--clr-muted)"><i class="fas fa-city me-1"></i>' +
+    ? '<p style="font-size:.72rem;color:var(--clr-muted);margin:.4rem 0 0"><i class="fas fa-city me-1"></i>' +
       esc(loc.city) + (loc.stateCode ? ', ' + esc(loc.stateCode) : '') + '</p>'
     : '';
 
   $('#communityDescription').html(
     '<div class="community-card">' +
-    '<p class="community-name"><i class="fas fa-map-marker-alt me-1" style="color:var(--clr-accent)"></i>' + displayName + '</p>' +
+    '<p class="community-name"><i class="fas fa-map-marker-alt"></i>' + displayName + '</p>' +
     '<div class="streets-row">' + streetBadges + '</div>' +
     cityLine + '</div>'
   );
 
-  // Gate codes or no-codes state
+  // Gate codes or empty state
   var codeHtml = '';
   if (data.found && data.community.gateCodes && data.community.gateCodes.length) {
-    codeHtml += '<p class="gate-codes-section-label"><i class="fas fa-key me-1"></i> Gate Codes</p>';
-    data.community.gateCodes.forEach(function(gc) {
-      var codeStr = String(gc.code || '');
-      var prefix  = (codeStr.length === 4 && codeStr !== '0000') ? '#' : '';
-      codeHtml += '<div class="gate-code-card">' +
-        '<p class="gate-code-label">' + esc(gc.description || 'Gate Code') + '</p>' +
-        '<p class="gate-code-number">' + prefix + esc(codeStr) + '</p>' + '</div>';
+    codeHtml += '<p class="gate-codes-section-label"><i class="fas fa-key"></i> Gate Codes</p>';
+    data.community.gateCodes.forEach(function(gc, idx) {
+      codeHtml += buildGateCardHtml(gc, idx === 0);
     });
   } else if (data.found) {
-    codeHtml = '<div class="gate-code-card" style="color:var(--clr-muted);text-align:center;padding:2rem">' +
-      '<i class="fas fa-key fa-2x mb-2 d-block" style="opacity:.3"></i>' +
-      '<p class="mb-0" style="font-size:.875rem">No gate codes on record for this community</p></div>';
+    codeHtml = '<div class="gate-code-card" style="justify-content:center;color:var(--clr-muted);text-align:center;padding:2rem">' +
+      '<div><i class="fas fa-key fa-2x mb-2 d-block" style="opacity:.3"></i>' +
+      '<p class="mb-0" style="font-size:.875rem">No gate codes on record for this community</p></div></div>';
   } else {
     codeHtml = buildNoCodesHtml(loc);
   }
@@ -137,20 +165,21 @@ function renderLocateResult(data) {
 }
 
 function buildNoCodesHtml(loc) {
+  var street = esc(loc.street || '');
   return '<div class="no-codes-card">' +
     '<div class="no-codes-icon-wrap"><i class="fas fa-key"></i></div>' +
-    '<p class="no-codes-street">Street detected, no codes on file</p>' +
-    '<p class="no-codes-label">Be the first to submit a code for <strong>' + esc(loc.street) + '</strong></p>' +
+    '<p class="no-codes-street">No codes on file yet</p>' +
+    '<p class="no-codes-label">Be the first to submit a gate code for<br><strong>' + street + '</strong></p>' +
     '<button type="button" class="btn-suggest-code" onclick="toggleSuggestForm()">' +
-    '<i class="fas fa-plus me-1"></i> Suggest a Code</button></div>' +
+    '<i class="fas fa-plus"></i> Suggest a Code</button></div>' +
     '<div id="suggest-form" class="suggest-form d-none">' +
     '<p class="suggest-form-title"><i class="fas fa-key me-1"></i> Submit a Code for Review</p>' +
     '<p class="suggest-form-hint">Codes are reviewed by an admin before going live.</p>' +
     '<div class="street-ac-wrapper mb-2" id="suggest-ac-wrapper">' +
-    '<input type="text" id="suggest-street-input" class="form-control" placeholder="Street (edit or search)" value="' + esc(loc.street) + '" autocomplete="off" onfocus="suggestStreetInputChange(this)" oninput="suggestStreetInputChange(this)" onkeydown="suggestStreetKeyDown(event)">' +
+    '<input type="text" id="suggest-street-input" class="form-control" placeholder="Street (edit or search)" value="' + street + '" autocomplete="off" onfocus="suggestStreetInputChange(this)" oninput="suggestStreetInputChange(this)" onkeydown="suggestStreetKeyDown(event)">' +
     '<div class="street-ac-dropdown d-none" id="suggest-street-dropdown"></div>' +
     '</div>' +
-    '<input type="hidden" id="suggest-street" value="' + esc(loc.street) + '">' +
+    '<input type="hidden" id="suggest-street" value="' + street + '">' +
     '<input type="hidden" id="suggest-city" value="' + esc(loc.city || '') + '">' +
     '<input type="hidden" id="suggest-state" value="' + esc(loc.stateCode || '') + '">' +
     '<input type="hidden" id="suggest-postal" value="' + esc(loc.postalCode || '') + '">' +
@@ -162,21 +191,19 @@ function buildNoCodesHtml(loc) {
     '<i class="fas fa-paper-plane me-1"></i> Submit for Review</button>' +
     '<p class="d-none ss-alert ss-alert-danger mt-2" id="suggest-error"></p>' +
     '<p class="d-none ss-alert ss-alert-success mt-2" id="suggest-success"></p></div>' +
-    '<div class="unregistered-banner mt-2">' +
-    '<p class="unregistered-title"><i class="fas fa-tools me-1"></i> Admin: Register This Address</p>' +
-    '<p class="unregistered-text">Formally add this street with a community name and full details.</p>' +
-    '<button type="button" class="btn-accent" onclick="focusOnAdminPass()" data-bs-toggle="modal" data-bs-target="#adminPassModal">' +
-    '<i class="fas fa-plus"></i> Include Community</button></div>';
+    '<div class="divider"></div>' +
+    '<div class="text-center">' +
+    '<a href="#" class="admin-text-link" onclick="focusOnAdminPass(); return false;" data-bs-toggle="modal" data-bs-target="#adminPassModal">' +
+    '<i class="fas fa-wrench"></i> Admin? Register this street</a></div>';
 }
 
-// ── Admin Include (password modal) ───────────────────
+// ── Admin Include ─────────────────────────────────────
 function includeCommunity() {
   var payload = ($('#locationJSONString').val() || $('#geoCodeForm textarea[name="locationJSONString"]').val() || '').trim();
   if (!payload) {
     $('#error-message').text('No location data found. Please use Re-locate first.').show();
     return;
   }
-
   var adminPass = $('#adminPass').val().trim();
   if (!adminPass) {
     $('#error-message').text('Password cannot be empty').show();
@@ -215,7 +242,7 @@ function focusOnAdminPass() {
   }
 }
 
-// ── User code suggestion (unregistered community) ────
+// ── Code suggestion (unregistered community) ──────────
 function toggleSuggestForm() {
   var form = document.getElementById('suggest-form');
   if (!form) return;
@@ -223,11 +250,7 @@ function toggleSuggestForm() {
     form.classList.remove('d-none');
     setTimeout(function () {
       var streetInput = document.getElementById('suggest-street-input');
-      if (streetInput) {
-        streetInput.focus();
-        streetInput.select();
-        return;
-      }
+      if (streetInput) { streetInput.focus(); streetInput.select(); return; }
       var desc = document.getElementById('suggest-description');
       if (desc) desc.focus();
     }, 50);
@@ -242,13 +265,8 @@ var suggestAcTimer = null;
 function suggestStreetInputChange(input) {
   var q = (input.value || '').trim();
   clearTimeout(suggestAcTimer);
-  if (q.split(',')[0].trim().length < 2) {
-    closeSuggestStreetAc();
-    return;
-  }
-  suggestAcTimer = setTimeout(function() {
-    fetchSuggestStreetSuggestions(q);
-  }, 180);
+  if (q.split(',')[0].trim().length < 2) { closeSuggestStreetAc(); return; }
+  suggestAcTimer = setTimeout(function() { fetchSuggestStreetSuggestions(q); }, 180);
 }
 
 function suggestStreetKeyDown(e) {
@@ -287,7 +305,7 @@ function _googlePlaceSuggest(q, geoOptions, callback) {
   };
   if (geoOptions && geoOptions.lat && geoOptions.lng) {
     opts.location = new google.maps.LatLng(geoOptions.lat, geoOptions.lng);
-    opts.radius = 80000; // 80 km bias — heavily prefers nearby streets
+    opts.radius = 80000;
     opts.strictBounds = false;
   }
   svc.getPlacePredictions(opts, function(preds, status) {
@@ -339,9 +357,7 @@ function fetchSuggestStreetSuggestions(q) {
       });
       renderDropdown(allResults.slice(0, 6));
     });
-  }).fail(function() {
-    closeSuggestStreetAc();
-  });
+  }).fail(function() { closeSuggestStreetAc(); });
 }
 
 function selectSuggestStreetSuggestion(street, city, state) {
@@ -376,11 +392,11 @@ function submitSuggestedCode() {
   $ok.addClass('d-none');
 
   if (!street) { $err.text('Please enter the street name').removeClass('d-none'); return; }
-  if (!desc) { $err.text('Please enter a description (e.g. Main Gate)').removeClass('d-none'); return; }
-  if (!code) { $err.text('Please enter the gate code').removeClass('d-none'); return; }
+  if (!desc)   { $err.text('Please enter a description (e.g. Main Gate)').removeClass('d-none'); return; }
+  if (!code)   { $err.text('Please enter the gate code').removeClass('d-none'); return; }
 
   var $btn = $('#suggest-submit-btn');
-  $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Submitting\u2026');
+  $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Submitting…');
 
   $.post(domain + '/suggestCode',
     { street: street, city: city, stateCode: state, postalCode: postal, description: desc, code: code },
