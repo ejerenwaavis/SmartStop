@@ -80,3 +80,182 @@ body{
   background: #1a7a40;
   color: #fff;
 }
+
+/* ── Admin include/add form shell ───────────────────── */
+#add-community-form {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem;
+}
+
+.admin-section {
+  margin-bottom: 1rem;
+}
+
+.admin-section-title {
+  margin: 0 0 .45rem;
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--clr-primary);
+  letter-spacing: .01em;
+}
+
+.field-pair {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+}
+
+.field-pair .form-control {
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--clr-border);
+  font-size: .9rem;
+  padding: .55rem .75rem;
+  box-shadow: none;
+}
+
+.field-pair .form-control:focus,
+#add-community-form .form-control:focus {
+  border-color: var(--clr-accent);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, .12);
+}
+
+#add-community-form > .admin-section > .form-control,
+#gate-code-container .form-control {
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--clr-border);
+  font-size: .9rem;
+  padding: .55rem .75rem;
+}
+
+.btn-add-field,
+.btn-discover,
+.btn-add-discovered {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--clr-border);
+  background: var(--clr-surface);
+  color: var(--clr-muted);
+  font-size: .75rem;
+  font-weight: 700;
+  padding: .45rem .85rem;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.btn-add-field:hover,
+.btn-discover:hover,
+.btn-add-discovered:hover {
+  border-color: var(--clr-accent);
+  color: var(--clr-accent-hover);
+}
+
+.btn-discover {
+  background: #fff7e8;
+  border-color: #fcd89a;
+  color: #8a5a06;
+}
+
+.btn-discover:disabled {
+  opacity: .75;
+  cursor: default;
+}
+
+.discover-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(138, 90, 6, .25);
+  border-top-color: #8a5a06;
+  animation: admin-discover-spin .7s linear infinite;
+}
+
+@keyframes admin-discover-spin {
+  to { transform: rotate(360deg); }
+}
+
+#street-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.street-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-pill);
+  padding: .28rem .6rem;
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--clr-muted);
+}
+
+.street-tag-remove {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #991b1b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: .62rem;
+  line-height: 1;
+}
+
+#discovery-results {
+  margin-top: .55rem;
+  padding: .7rem;
+  border: 1px dashed #f6c56a;
+  border-radius: var(--radius-sm);
+  background: #fffbeb;
+}
+
+.discovery-list-title {
+  margin: 0 0 .55rem;
+  font-size: .72rem;
+  font-weight: 700;
+  color: #8a5a06;
+}
+
+#discovery-items {
+  display: grid;
+  gap: .35rem;
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: .65rem;
+}
+
+.discovery-item {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .8rem;
+  color: var(--clr-primary);
+}
+
+@media (max-width: 576px) {
+  #add-community-form {
+    padding: .8rem;
+  }
+
+  .field-pair {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-add-street,
+  .btn-discover {
+    width: 100%;
+    justify-content: center;
+  }
+}
