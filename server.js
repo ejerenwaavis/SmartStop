@@ -20,6 +20,7 @@ const DEBUG_API      = (process.env.DEBUG_API || '').toLowerCase() === 'true';
 const ADMIN_EMAILS   = (process.env.ADMIN_EMAILS || '').split(',').map(function(e) { return e.trim().toLowerCase(); }).filter(Boolean);
 const GOOGLE_MAPS_PLATFORM_API = (process.env.GOOGLE_MAPS_PLATFORM_API || '').trim();
 
+const path                 = require('path');
 const express              = require('express');
 const https                = require('https');
 const crypto               = require('crypto');
@@ -44,9 +45,11 @@ app.use(helmet({ contentSecurityPolicy: false })); // CSP disabled — tune sepa
 app.use(compression());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static('public'));
+
+const staticPath = path.join(__dirname, 'public');
+app.use(express.static(staticPath));
 if (APP_DIRECTORY) {
-  app.use(APP_DIRECTORY, express.static('public'));
+  app.use(APP_DIRECTORY, express.static(staticPath));
 } else {
   // When deployed at domain root (no APP_DIRECTORY), redirect any legacy
   // /smartstop/* paths so old bookmarks and links still work.
