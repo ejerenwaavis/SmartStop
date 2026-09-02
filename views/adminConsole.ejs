@@ -87,31 +87,95 @@
 
 <!-- Pending tab (hidden by default) -->
 <div id="tab-pending" style="display:none">
+  <%
+    var submitters = [];
+    if (pendingCodes && pendingCodes.length > 0) {
+      var sSet = new Set();
+      pendingCodes.forEach(function(p) {
+        sSet.add(p.submittedBy || 'Anonymous');
+      });
+      submitters = Array.from(sSet).sort();
+    }
+  %>
+
   <% if (pendingCodes && pendingCodes.length > 0) { %>
-    <% for (var pc of pendingCodes) { %>
-      <% var rawCode = String(pc.gateCode || '').replace(/^#+/, ''); %>
-      <div class="pending-code-card" id="pc-<%= pc._id %>">
-        <div class="pending-code-info">
-          <p class="pending-code-street"><%= pc.street %></p>
-          <p class="pending-code-location"><%= pc.city %><% if(pc.city && pc.stateCode){ %>, <% } %><%= pc.stateCode %></p>
-          <div class="pending-code-value">
-            <span class="pending-type-chip"><%= pc.gateCodeDescription || 'Code' %></span>
-            <span class="pending-code-number"><% if (rawCode.length === 4 && rawCode !== '0000') { %><span class="code-hash">#</span><% } %><%= rawCode %></span>
-          </div>
-          <p class="pending-code-date"><i class="fas fa-calendar-alt me-1"></i><%= new Date(pc.submittedAt).toLocaleDateString() %></p>
-        </div>
-        <div class="pending-code-actions">
-          <button class="btn-approve" onclick="approveCode('<%= pc._id %>')">
-            <i class="fas fa-check"></i> Approve
-          </button>
-          <button class="btn-reject" onclick="rejectCode('<%= pc._id %>')">
-            <i class="fas fa-times"></i> Reject
-          </button>
-        </div>
+    <!-- Filter Bar -->
+    <div class="pending-filter-bar">
+      <div class="pending-filter-group">
+        <label for="filter-submitter" class="filter-label"><i class="fas fa-filter"></i> Submitter:</label>
+        <select id="filter-submitter" class="filter-select" onchange="filterPendingCodes()">
+          <option value="">All Submitters (<%= pendingCodes.length %>)</option>
+          <% for (var sub of submitters) { %>
+            <% var subCount = pendingCodes.filter(function(p){ return (p.submittedBy || 'Anonymous') === sub; }).length; %>
+            <option value="<%= sub %>"><%= sub %> (<%= subCount %>)</option>
+          <% } %>
+        </select>
       </div>
-    <% } %>
+      <div class="pending-search-group">
+        <i class="fas fa-search filter-search-icon"></i>
+        <input type="text" id="pending-search" class="filter-search-input" placeholder="Search street or code..." oninput="filterPendingCodes()">
+      </div>
+    </div>
+
+    <!-- Bulk Action Bar -->
+    <div class="bulk-action-bar" id="bulk-action-bar">
+      <div class="bulk-selection-info">
+        <label class="custom-checkbox-container select-all-label">
+          <input type="checkbox" id="select-all-pending" onchange="toggleSelectAllPending(this.checked)">
+          <span class="custom-checkmark"></span>
+          <span class="select-all-text">Select All</span>
+        </label>
+        <span class="selection-counter" id="selected-counter">0 selected</span>
+      </div>
+      <div class="bulk-buttons">
+        <button class="btn-bulk-approve" id="btn-bulk-approve" onclick="bulkApproveCodes()" disabled>
+          <i class="fas fa-check-double"></i> Bulk Accept
+        </button>
+        <button class="btn-bulk-reject" id="btn-bulk-reject" onclick="bulkRejectCodes()" disabled>
+          <i class="fas fa-times"></i> Bulk Reject
+        </button>
+      </div>
+    </div>
+
+    <div class="no-results-banner d-none" id="no-filter-results">
+      <i class="fas fa-search" style="opacity:.3;font-size:1.5rem;display:block;margin-bottom:.5rem"></i>
+      No matching pending submissions
+    </div>
+
+    <div id="pending-cards-list">
+      <% for (var pc of pendingCodes) { %>
+        <% var rawCode = String(pc.gateCode || '').replace(/^#+/, ''); %>
+        <% var subName = pc.submittedBy || 'Anonymous'; %>
+        <div class="pending-code-card" id="pc-<%= pc._id %>" data-id="<%= pc._id %>" data-submitter="<%= subName %>" data-search="<%= (pc.street + ' ' + (pc.city || '') + ' ' + rawCode + ' ' + subName).toLowerCase() %>">
+          <label class="custom-checkbox-container card-select-container">
+            <input type="checkbox" class="pending-card-checkbox" value="<%= pc._id %>" onchange="onCardCheckboxChange()">
+            <span class="custom-checkmark"></span>
+          </label>
+          <div class="pending-code-info">
+            <p class="pending-code-street"><%= pc.street %></p>
+            <p class="pending-code-location"><%= pc.city %><% if(pc.city && pc.stateCode){ %>, <% } %><%= pc.stateCode %></p>
+            <div class="pending-code-value">
+              <span class="pending-type-chip"><%= pc.gateCodeDescription || 'Code' %></span>
+              <span class="pending-code-number"><% if (rawCode.length === 4 && rawCode !== '0000') { %><span class="code-hash">#</span><% } %><%= rawCode %></span>
+            </div>
+            <div class="pending-code-meta">
+              <span class="pending-code-date"><i class="fas fa-calendar-alt me-1"></i><%= new Date(pc.submittedAt).toLocaleDateString() %></span>
+              <span class="pending-submitter-badge" title="Submitted by"><i class="fas fa-user me-1"></i><%= subName %></span>
+            </div>
+          </div>
+          <div class="pending-code-actions">
+            <button class="btn-approve" onclick="approveCode('<%= pc._id %>')">
+              <i class="fas fa-check"></i> Approve
+            </button>
+            <button class="btn-reject" onclick="rejectCode('<%= pc._id %>')">
+              <i class="fas fa-times"></i> Reject
+            </button>
+          </div>
+        </div>
+      <% } %>
+    </div>
   <% } else { %>
-    <div class="no-results-banner">
+    <div class="no-results-banner" id="empty-pending-banner">
       <i class="fas fa-inbox" style="opacity:.3;font-size:1.5rem;display:block;margin-bottom:.5rem"></i>
       No pending submissions
     </div>

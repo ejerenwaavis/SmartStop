@@ -1,4 +1,4 @@
-﻿// -----------------------------------------
+// -----------------------------------------
 // SmartStop Server
 // -----------------------------------------
 
@@ -105,6 +105,8 @@ const pendingCodeSchema = new mongoose.Schema({
   postalCode:          String,
   gateCodeDescription: String,
   gateCode:            String,
+  submittedBy:         { type: String, default: 'Anonymous' },
+  submittedById:       { type: String, default: null },
   submittedAt:         { type: Date, default: Date.now }
 });
 const PendingCode = mongoose.model('PendingCode', pendingCodeSchema);
@@ -918,13 +920,18 @@ app.post(APP_DIRECTORY + '/suggestCode', requireAuth, async function(req, res) {
       return res.json({ ok: false });
     }
 
+    var submitterName = (req.user && (req.user.username || req.user.email)) || 'Anonymous';
+    var submitterId = (req.user && req.user._id) || null;
+
     await new PendingCode({
       street: street,
       city: city,
       stateCode: stateCode,
       postalCode: postalCode,
       gateCodeDescription: description,
-      gateCode: code
+      gateCode: code,
+      submittedBy: submitterName,
+      submittedById: submitterId
     }).save();
 
     res.json({ ok: true });
@@ -934,6 +941,42 @@ app.post(APP_DIRECTORY + '/suggestCode', requireAuth, async function(req, res) {
   }
 });
 
+async function processApproveCode(pending) {
+  var street = sanitize((pending.street || '').trim());
+  var city = sanitize((pending.city || '').trim());
+  var stateCode = sanitize((pending.stateCode || '').trim());
+  var gateDescription = sanitize((pending.gateCodeDescription || 'Gate Code').trim());
+  var gateCode = sanitize((pending.gateCode || '').trim());
+
+  if (!street || !gateCode) return false;
+
+  var community = await Community.findOne({ streets: street });
+  if (community) {
+    var duplicateGate = (community.gateCodes || []).some(function(g) {
+      return String(g.description || '').toLowerCase() === gateDescription.toLowerCase() &&
+             String(g.code || '') === gateCode;
+    });
+
+    if (!duplicateGate) {
+      community.gateCodes.push({ description: gateDescription, code: gateCode });
+    }
+    if (!community.city && city) community.city = city;
+    if (!community.stateCode && stateCode) community.stateCode = stateCode;
+    await community.save();
+  } else {
+    await new Community({
+      communityName: street,
+      streets: [street],
+      city: city,
+      stateCode: stateCode,
+      gateCodes: [{ description: gateDescription, code: gateCode }]
+    }).save();
+  }
+
+  await PendingCode.deleteOne({ _id: pending._id });
+  return true;
+}
+
 app.post(APP_DIRECTORY + '/approveCode', requireAuth, async function(req, res) {
   try {
     var id = String((req.body && req.body.id) || '').trim();
@@ -942,42 +985,35 @@ app.post(APP_DIRECTORY + '/approveCode', requireAuth, async function(req, res) {
     var pending = await PendingCode.findById(id);
     if (!pending) return res.json({ ok: false });
 
-    var street = sanitize((pending.street || '').trim());
-    var city = sanitize((pending.city || '').trim());
-    var stateCode = sanitize((pending.stateCode || '').trim());
-    var gateDescription = sanitize((pending.gateCodeDescription || 'Gate Code').trim());
-    var gateCode = sanitize((pending.gateCode || '').trim());
-
-    if (!street || !gateCode) return res.json({ ok: false });
-
-    var community = await Community.findOne({ streets: street });
-    if (community) {
-      var duplicateGate = (community.gateCodes || []).some(function(g) {
-        return String(g.description || '').toLowerCase() === gateDescription.toLowerCase() &&
-               String(g.code || '') === gateCode;
-      });
-
-      if (!duplicateGate) {
-        community.gateCodes.push({ description: gateDescription, code: gateCode });
-      }
-      if (!community.city && city) community.city = city;
-      if (!community.stateCode && stateCode) community.stateCode = stateCode;
-      await community.save();
-    } else {
-      await new Community({
-        communityName: street,
-        streets: [street],
-        city: city,
-        stateCode: stateCode,
-        gateCodes: [{ description: gateDescription, code: gateCode }]
-      }).save();
-    }
-
-    await PendingCode.deleteOne({ _id: pending._id });
-    res.json({ ok: true });
+    var success = await processApproveCode(pending);
+    res.json({ ok: success });
   } catch (err) {
     debugLog('/approveCode error', err.message);
     res.json({ ok: false });
+  }
+});
+
+app.post(APP_DIRECTORY + '/bulkApproveCodes', requireAuth, async function(req, res) {
+  try {
+    var ids = req.body && req.body.ids;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.json({ ok: false, count: 0 });
+    }
+
+    var approvedCount = 0;
+    for (var id of ids) {
+      var cleanId = String(id || '').trim();
+      if (!cleanId) continue;
+      var pending = await PendingCode.findById(cleanId);
+      if (!pending) continue;
+      var ok = await processApproveCode(pending);
+      if (ok) approvedCount++;
+    }
+
+    res.json({ ok: true, count: approvedCount });
+  } catch (err) {
+    debugLog('/bulkApproveCodes error', err.message);
+    res.json({ ok: false, count: 0 });
   }
 });
 
@@ -990,6 +1026,22 @@ app.post(APP_DIRECTORY + '/rejectCode', requireAuth, async function(req, res) {
   } catch (err) {
     debugLog('/rejectCode error', err.message);
     res.json({ ok: false });
+  }
+});
+
+app.post(APP_DIRECTORY + '/bulkRejectCodes', requireAuth, async function(req, res) {
+  try {
+    var ids = req.body && req.body.ids;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.json({ ok: false, count: 0 });
+    }
+
+    var cleanIds = ids.map(function(id) { return String(id || '').trim(); }).filter(Boolean);
+    var result = await PendingCode.deleteMany({ _id: { $in: cleanIds } });
+    res.json({ ok: true, count: result.deletedCount || 0 });
+  } catch (err) {
+    debugLog('/bulkRejectCodes error', err.message);
+    res.json({ ok: false, count: 0 });
   }
 });
 
